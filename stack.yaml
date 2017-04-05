@@ -1,0 +1,9 @@
+flags: {}
+packages:
+- workflow
+extra-deps:
+- introduction-0.0.1.0
+- optparse-applicative-0.13.2.0
+- validity-containers-0.1.0.3
+- validity-0.3.3.0
+resolver: lts-8.7
