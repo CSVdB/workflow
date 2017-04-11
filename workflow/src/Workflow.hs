@@ -4,7 +4,7 @@ import Introduction
 
 import Workflow.Types
 import Workflow.OptParse
-import qualified Data.Text.IO as T
+-- import qualified Data.Text.IO as T
 
 workflow :: IO ()
 workflow = do
