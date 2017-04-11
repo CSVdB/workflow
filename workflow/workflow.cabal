@@ -4,11 +4,11 @@ cabal-version: >=1.10
 build-type: Simple
 license: AllRightsReserved
 license-file: LICENSE
-copyright: Copyright: (c) 2016 Tom Sydney Kerckhove
+copyright: Copyright: (c) 2017 Tom Sydney Kerckhove
 maintainer: syd.kerckhove@gmail.com
 homepage: http://cs-syd.eu
 category: CsSyd
-author: Tom Sydney Kerckhove
+authors: Tom Sydney Kerckhove && Nick Van den Broeck
 
 library
     exposed-modules:

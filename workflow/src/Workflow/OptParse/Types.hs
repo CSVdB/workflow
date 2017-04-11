@@ -5,7 +5,7 @@ import Introduction
 type Arguments = (Command, Flags)
 type Instructions = (Dispatch, Settings)
 data Command
-    = Command
+    = CommandWaiting
     deriving (Show, Eq)
 
 data Flags
@@ -17,7 +17,7 @@ data Configuration
     deriving (Show, Eq)
 
 data Dispatch
-    = Dispatch
+    = DispatchWaiting
     deriving (Show, Eq)
 
 data Settings

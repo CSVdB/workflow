@@ -16,7 +16,9 @@ getInstructions = do
     combineToInstructions cmd flags config
 
 combineToInstructions :: Command -> Flags -> Configuration -> IO Instructions
-combineToInstructions Command Flags Configuration = pure (Dispatch, Settings)
+combineToInstructions CommandWaiting Flags Configuration = pure (DispatchWaiting, Settings)
+-- Add the option for a config file to give the path to the workflow directory
+-- to be used by wf.
 
 getConfiguration :: Command -> Flags -> IO Configuration
 getConfiguration _ _ = pure Configuration
@@ -38,6 +40,7 @@ runArgumentsParser = execParserPure prefs_ argParser
       , prefBacktrack = True
       , prefColumns = 80
       }
+
 argParser :: ParserInfo Arguments
 argParser = info (helper <*> parseArgs) help_
   where
@@ -49,15 +52,15 @@ parseArgs = (,) <$> parseCommand <*> parseFlags
 
 parseCommand :: Parser Command
 parseCommand = hsubparser $ mconcat
-    [ command "command" parseCommandCommand
+    [ command "waiting" parseCommandWaiting
     ]
 
-parseCommandCommand :: ParserInfo Command
-parseCommandCommand = info parser modifier
+parseCommandWaiting :: ParserInfo Command
+parseCommandWaiting = info parser modifier
   where
-    parser = pure Command
+    parser = pure CommandWaiting
     modifier = fullDesc
-            <> progDesc "Command example."
+            <> progDesc "Print a list of the \"waiting\" tasks"
 
 parseFlags :: Parser Flags
 parseFlags = pure Flags
