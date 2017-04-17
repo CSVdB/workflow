@@ -10,15 +10,6 @@ cache:
   directories:
   - $HOME/.stack
 
-# Use this kind of code to execute tests for each subpart of workflow
-# matrix:
-#   include:
-#   - env: 
-#       - RESOLVER_FLAG="--stack-yaml lts-8.yaml"
-#       - BUILD_PKGS=""
-#       - TEST_PKGS=""
-#     addons: {apt: {packages: [libgmp-dev]}}
-
 before_install:
   - mkdir -p ~/.local/bin
   - export PATH=$HOME/.local/bin:$PATH

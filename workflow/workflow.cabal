@@ -8,7 +8,7 @@ copyright: Copyright: (c) 2017 Tom Sydney Kerckhove
 maintainer: syd.kerckhove@gmail.com
 homepage: http://cs-syd.eu
 category: CsSyd
-authors: Tom Sydney Kerckhove && Nick Van den Broeck
+author: Tom Sydney Kerckhove and Nick Van den Broeck
 
 library
     exposed-modules:
@@ -16,11 +16,17 @@ library
         Workflow.Types
         Workflow.OptParse
         Workflow.OptParse.Types
+        Import
     build-depends:
         base >=4.9 && <=5,
         introduction -any,
-        optparse-applicative >=0.13,
-        time >=1.6
+        optparse-applicative -any,
+        time >=1.6,
+        text >=1.2,
+        filepath >=1.4,
+        configurator >=0.2,
+        path >=0.3,
+        path-io >=1.2
     default-language: Haskell2010
     default-extensions: NoImplicitPrelude
     hs-source-dirs: src/

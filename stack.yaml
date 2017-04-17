@@ -6,4 +6,5 @@ extra-deps:
 - optparse-applicative-0.13.2.0
 - validity-containers-0.1.0.3
 - validity-0.3.3.0
+- validity-path-0.1.0.1
 resolver: lts-8.7
