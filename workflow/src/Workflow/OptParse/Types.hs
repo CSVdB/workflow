@@ -6,8 +6,6 @@ module Workflow.OptParse.Types where
 
 import Introduction
 
-type Configured = ReaderT Settings IO
-
 type Arguments = (Command, Flags)
 
 type Instructions = (Dispatch, Settings)

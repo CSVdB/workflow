@@ -1,12 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Workflow where
 
-import Introduction
-
-import qualified Data.Text.IO as T
+import qualified Data.ByteString as BS
+import Data.OrgMode.Parse
+import qualified Data.Text as T
 import Data.Time.Clock
+import Import
+import Options.Applicative.Extra
 import Workflow.OptParse
+
+type Text = T.Text
+
+type ByteString = BS.ByteString
 
 workflow :: IO ()
 workflow = do
@@ -19,46 +26,58 @@ execute (DispatchWaiting workflowPath) = waiting workflowPath
 waiting :: Path Abs Dir -> Settings -> IO ()
 waiting workflowPath _ = do
     files <- filesIO workflowPath
-    tasks <- extractTasksFromFiles files
-    let waitingTasks = sort $ filter isWaiting tasks
-    mapM_ putStrLn $ fmap toString waitingTasks
-
-toString :: Task -> String
-toString _ = ""
-
-data Status
-    = TODO
-    | DONE
-    | CANCELLED
-    | WAITING
-    deriving (Show, Eq)
-
-data Task = Task
-    { status :: Status
-    , description :: String
-    , time :: Maybe UTCTime
-    } deriving (Show, Eq)
-
-instance Ord Task where
-    (<=) _ _ = True
-
-isWaiting :: Task -> Bool
-isWaiting task = status task == WAITING
+    textList <- mapM getContent files -- textList :: [(ByteString, Path Rel File)]
+    let headings = filter (isWaiting . fst) $ foldMap toHeading textList
+    let tasks = sort $ fmap toTask headings
+    output <- mapM toString tasks
+    mapM_ putStrLn output
 
 filesIO :: Path Abs Dir -> IO [Path Abs File]
-filesIO _ = pure []
+filesIO workPath = do
+    (_, files) <- listDirRecur workPath
+    let endsInOrg file = ".org" == drop (length file - 4) file
+    pure $ filter (endsInOrg . toFilePath) files
 
-extractTasks :: Path Abs File -> IO [Task]
-extractTasks filePath = do
-    text <- T.readFile (toFilePath filePath)
-    pure $ toTasks text
+getContent :: Path Abs File -> IO (ByteString, Path Rel File)
+getContent filePath = do
+    text <- BS.readFile $ toFilePath filePath
+    pure (text, filename filePath)
 
-extractTasksFromFiles :: [Path Abs File] -> IO [Task]
-extractTasksFromFiles [] = pure []
-extractTasksFromFiles (x:xs) = do
-    tasks <- extractTasks x
-    otherTasks <- extractTasksFromFiles xs
-    pure $ tasks ++ otherTasks
+isWaiting :: Heading -> Bool
+isWaiting Heading {..} = keyword == Just (StateKeyword "WAITING")
 
-toTasks :: Text -> [Task]
-toTasks _ = []
+toString :: WaitingTask -> IO String
+toString WaitingTask {..} = do
+    currentTime <- getCurrentTime
+    let file = fromRelFile orgFile
+    let nOfDays = (floor $ (/ nominalDay) $ diffUTCTime currentTime date) :: Int
+    pure $
+        file ++
+        ": " ++
+        "WAITING for an update from " ++ name ++ ": " ++ show nOfDays ++ " days"
+
+-- | One day in 'NominalDiffTime'.
+nominalDay :: NominalDiffTime
+nominalDay = 86400
+
+data WaitingTask = WaitingTask
+    { date :: UTCTime
+    , orgFile :: Path Rel File
+    , name :: String
+    } deriving (Show, Eq)
+
+instance Ord WaitingTask where
+    (<=) task1 task2 = date task1 <= date task2
+
+toTask :: (Heading, Path Rel File) -> WaitingTask
+toTask _ = undefined
+
+toHeading :: (ByteString, Path Rel File) -> [(Heading, Path Rel File)]
+toHeading _ = undefined
+
+-- let parser = parseDocument ["WAITING", "TODO", "CANCELLED", "DONE"]
+--     doc = maybeResult $ parse parser text
+toTasks :: Text -> ParserResult [Heading]
+toTasks _ = undefined
+-- parseDocument :: [Text] -> Parser Text Document
+-- documentHeadings :: Document -> [Heading]

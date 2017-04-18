@@ -36,16 +36,16 @@ getDispatchFromConfig CommandWaiting Configuration {..} = do
 
 getConfig :: Flags -> IO Configuration
 getConfig flags = do
-    configPath <- getWorkflowPath flags
-    pure Configuration {confDataDir = configPath}
+    configPath <- getWorkPath flags
+    pure Configuration {confDataDir = fromAbsDir configPath}
 
-getWorkflowPath :: Flags -> IO FilePath
-getWorkflowPath flags@Flags {..} =
+getWorkPath :: Flags -> IO (Path Abs Dir)
+getWorkPath flags@Flags {..} =
     case confPath of
         Nothing -> do
             configPath <- getConfigPath flags
             getWorkPathFromConfigPath configPath
-        Just configPath -> pure configPath
+        Just configPath -> parseAbsDir configPath
 
 getConfigPath :: Flags -> IO (Path Abs File)
 getConfigPath Flags {..} =
@@ -53,15 +53,15 @@ getConfigPath Flags {..} =
         Nothing -> defaultConfigFile
         Just path -> resolveFile' path
 
-getWorkPathFromConfigPath :: Path Abs File -> IO FilePath
+getWorkPathFromConfigPath :: Path Abs File -> IO (Path Abs Dir)
 getWorkPathFromConfigPath confPath = do
     config <- load [Optional $ toFilePath confPath] :: IO Config
     configPath <- lookup config "path"
     case configPath of
         Nothing -> do
-            putStrLn "There is no DirectoryPath in the configuration file!"
-            exitFailure
-        Just directoryPath -> pure directoryPath
+            home <- getHomeDir
+            resolveDir home "workflow"
+        Just directoryPath -> parseAbsDir directoryPath
 
 defaultConfigFile :: IO (Path Abs File)
 defaultConfigFile = do
@@ -119,7 +119,7 @@ parseFlags =
     option
         (Just <$> str)
         (mconcat
-             [ long "configPath"
+             [ long "config_path"
              , help "Give the path to the workflow directory to be used"
              , value Nothing
              , metavar "FILEPATH"
