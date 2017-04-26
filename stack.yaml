@@ -9,4 +9,4 @@ extra-deps:
 - validity-0.3.3.0
 - validity-path-0.1.0.1
 - text-time-0.2.0
-resolver: lts-8.7
+resolver: lts-8.11
