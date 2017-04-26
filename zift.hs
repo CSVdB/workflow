@@ -2,14 +2,13 @@
 {- stack
     --install-ghc
     runghc
-    --package zifter
+    --package zifter-0.0.1.1
     --package zifter-cabal
     --package zifter-git
     --package zifter-hindent
     --package zifter-hlint
     --package zifter-stack
 -}
-
 import Zifter
 import Zifter.Cabal
 import Zifter.Git
@@ -20,8 +19,8 @@ import Zifter.Stack
 main :: IO ()
 main =
     ziftWith $ do
-        preprocess $ ziftP [hindentZift, cabalFormatZift]
-        precheck gitAddAllZift
+        preprocessor $ ziftP [hindentZift, cabalFormatZift]
+        prechecker gitAddAllZift
         checker $ do
             hlintZift
             stackBuildZift

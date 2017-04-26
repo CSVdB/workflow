@@ -4,6 +4,9 @@ packages:
 extra-deps:
 - introduction-0.0.1.0
 - optparse-applicative-0.13.2.0
+- orgmode-parse-0.1.1.3
 - validity-containers-0.1.0.3
 - validity-0.3.3.0
-resolver: lts-8.7
+- validity-path-0.1.0.1
+- zifter-0.0.1.1
+resolver: lts-8.11
