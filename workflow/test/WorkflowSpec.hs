@@ -32,7 +32,10 @@ spec =
         assertEqual
             "The first task which should be printed"
             (head strings)
-            "acc.org: WAITING for the internet company to reply about the wrong invoice.: 29 days"
+            [ "acc.org:"
+            , "WAITING for the internet company to reply about the wrong invoice.:"
+            , "29 days"
+            ]
         -- Checks the exact printed version of one task.
         -- This tests getDate, toWaitingTask, getOutput etc.
         {-case parseRelFile "projects/jobhunt.org" of

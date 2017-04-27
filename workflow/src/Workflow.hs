@@ -14,6 +14,7 @@ import Data.Time.Clock
 import Data.Time.Format
 import Data.Tuple
 import Import
+import Text.PrettyPrint.Boxes
 import Workflow.OptParse
 
 workflow :: IO ()
@@ -37,7 +38,13 @@ waiting workflowPath settings@Settings {..} = do
 output :: [(Heading, Path Rel File)] -> IO ()
 output waitingHeadings = do
     result <- getOutput waitingHeadings
-    mapM_ putStrLn result
+    boxFormat result
+
+boxFormat :: [[String]] -> IO ()
+boxFormat list =
+    let boxes = fmap text <$> transpose list
+        table = hsep 1 center1 $ fmap (vcat left) boxes
+    in printBox table
 
 getWaitingHeadings :: Path Abs Dir
                    -> Settings
@@ -51,7 +58,7 @@ getWaitingHeadings workflowPath _ = do
     let errMess = concat errorMessages
     pure (filter (isWaiting . fst) headings, errMess)
 
-getOutput :: [(Heading, Path Rel File)] -> IO [String]
+getOutput :: [(Heading, Path Rel File)] -> IO [[String]]
 getOutput waitingHeadings =
     let tasks =
             reverse $
@@ -73,18 +80,21 @@ isWaiting :: Heading -> Bool
 isWaiting Heading {..} =
     keyword == Just StateKeyword {unStateKeyword = "WAITING"}
 
-toString :: WaitingTask -> IO String
+toString :: WaitingTask -> IO [String]
 toString WaitingTask {..} =
     let file = fromRelFile orgFile
-        outputString = file ++ ": " ++ "WAITING " ++ description
     in case date of
-           Nothing -> pure outputString
+           Nothing -> pure [file ++ ":", "WAITING " ++ description, " "]
            Just realDate -> do
                currentTime <- getCurrentTime
                let nOfDays =
                        (floor $
                         (/ nominalDay) $ diffUTCTime currentTime realDate) :: Int
-               pure $ outputString ++ ": " ++ show nOfDays ++ " days"
+               pure
+                   [ file ++ ":"
+                   , "WAITING " ++ description ++ ":"
+                   , show nOfDays ++ " days"
+                   ]
 
 -- | One day in 'NominalDiffTime'.
 nominalDay :: NominalDiffTime
