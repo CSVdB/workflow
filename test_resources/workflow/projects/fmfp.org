@@ -1,0 +1,612 @@
+* FMFP
+** CANCELLED Prepare for my first class
+   CLOSED: [2017-02-20 Mon 11:50] DEADLINE: <2017-02-22 Tue>
+** DONE Tell dmitriy if I don't get the contract by now
+   CLOSED: [2017-02-20 Mon 12:39] SCHEDULED: <2017-02-20 Mon>
+** DONE get all the relevant info together
+   CLOSED: [2017-02-20 Mon 20:55]
+   CLOCK: [2017-02-20 Mon 20:37]--[2017-02-20 Mon 20:55] =>  0:18
+   :END:
+- Exercise slides, session sheet, correction sheet, etc
+** DONE Prepare the laptop for the first class
+   CLOSED: [2017-02-21 Tue 22:00] DEADLINE: <2017-02-22 Tue>
+Get all the documents on there,
+get example files ready,
+** DONE First lecture
+   CLOSED: [2017-02-20 Mon 23:40]
+   :LOGBOOK:
+   CLOCK: [2017-02-20 Mon 20:55]--[2017-02-20 Mon 23:40] =>  2:45
+   :END:
+
+Sound EXCITED
+
+- About the course
+
+First two weeks are a little intro about automated mathematical reasoning.
+Week three until seven are about Haskell.
+After that, the functional programming part is done and you start with formal methods.
+There will still be a little bit of Haskell, from time to time.
+
+Sound EXCITED
+
+- About language
+
+I speak English, If you speak high german to me, I will understand you.
+BUT please don't ask me to speak german.
+In homeworks please use English.
+
+Sound EXCITED
+
+- About exercise sessions
+
+We will have an exercise session once a week.
+The exercise sessions are entirely optional, but I will try my best to make it worth your while.
+I am tempted to say 'No extra material will be presented during the exercise session that you will need for your exam'.
+It could be true that something is on the exam that I said but the professor hasn't, but then that's either background knowledge or Haskell.
+In short: Know Haskell and basic math by the exam, then you don't need to come here.
+
+We have one exercise sheet per week.
+The sheet is due on at midnight at the end of the week via codeboard.
+I will get you feedback by the next exercise session.
+
+- Breaks:
+
+We could either have a 2 hour session with a 15 min break or a 1h45min session without a break.
+Which do you prefer?
+
+Sound EXCITED
+
+- About me
+
+My name is Kerckhove.
+I have four years of experience with this material.
+I have worked with some of the top Haskell programmers in the world at Facebook, including some people who wrote the compiler.
+This is the second year that I'm teaching this class.
+I love this stuff, and I love talking about it.
+
+If you have any questions.
+Please let me know.
+There's most likely someone else in the room with the exact same question.
+and it might help me to realise I've explained something wrong or not enough.
+I promise we will still finish on time.
+
+Sound EXCITED
+
+- Speed recap of lecture:
+
+  - Declarative programming is cool
+    The idea is to describe a result, as opposed to describing how to get there.
+  - Haskell is weird:
+    - Functional: side effects are controlled (at the type level)
+    - Pure: immutable data, this allows for all kinds of optimisations
+    - Lazy: allows us to work with infinite things and it automatically optimizes things.
+    - Statically typed: Makes it MUCH easier to write programs that work.
+    - Type inference: No need to annotate everything with types, the compiler will do that for you.
+    - Concurrency: Because of all of the above, writing concurrent programs is easier than ever.
+
+Please don't think about how slow this must be.
+You are very smart people. Some people will cringe at these things and get an aversion to learning Haskell.
+The Haskell compiler builders are also very smart, and have managed to make Haskell faster than Python, Java,
+on par with C++ and only 3x slower than C, all while keeping in extremely elegant and safe.
+
+If at any point I explain something about Haskell and you think 'this must be horrendously slow or expensive',
+tell me, and I will explain to you the optimisations that are in place to make it so that you're wrong.
+
+- Example of haskell usages.
+
+People say Haskell is just for academics. WRONG
+
+  - My compiler.
+  - My website.
+  - Pandoc
+  - https://github.com/joeyh/git-annex
+  - Facebook.com
+
+- A tiny bit about types
+
+A type is a set of values with a name. This is WRONG, but it's good enough for now.
+
+So can you name some sets in increasing order of size?
+
+0 elements: Void
+1 element: Unit: ()
+2 elements: Bool
+3 elements: Ordering
+4 elements: ...
+
+Tuples are the product,
+Or-types are the sum of two types
+Then there are functions, which are the powers of types.
+
+Types can have type parameters.
+You can see it as a type function.
+There is something to be said about kinds, but it's a bit too soon for that right now.
+I just want to show you this concept once already.
+
+Now you have an idea of what a type is, I can explain IO:
+
+- Side effects in Haskell: The IO Data type
+
+What I'm going to explain now is only half true, but for now this is the way you should think about it.
+It's a bit like the public static void main (String[] args) in java. We'll explain the details later.
+
+- In short:
+
+IO in Haskell is an immutable value, just like any other value.
+REPEAT.
+
+It's type has a parameter. This parameter represents the value that it produces.
+Give an example.
+
+A value of type 'IO Int' is an IO action that results in an integer, when evaluated.
+In general: a value of type 'IO A' is an IO action that results in value of type 'A', when evaluated.
+
+A haskell program needs a 'main' function.
+The main function is a value of type 'IO ()'
+This means it's an IO action that produces a unit value. I.e. nothing.
+
+The implementation of 'main' describes how this value of type 'IO ()' is built.
+A value of type 'IO A' can be built from smaller pieces.
+Here are the basics:
+
+
+- A 'do' block allows you to make an IO value by putting IO values below each other.
+  For example:
+ 
+main :: IO ()
+main = do
+   launchMissiles
+   launchMissiles
+
+- When you have a value of type 'IO A', you can make an IO value with it, that uses the 'A' that is computed
+  You do it like this:
+
+myFunc :: IO Int
+myOtherFunc :: Int -> IO ()
+
+main :: IO
+main = do
+   i <- myFunc
+   myOtherFunc i
+
+- You can use any value of an arbitrary type 'A' to make a value of type IO that does nothing and produces that value.
+  You do this with 'pure :: a -> IO a'
+
+That is it
+- Repeat this explanation once
+any questions?
+
+show examples.
+
+- Conversion to and from String:
+
+To make a string value from another value, use 'show'.
+'show :: Show a => a -> String'.
+I cannot explain type classes just yet.
+For now just remember to read this type as
+'If a can be shown, then the type is a -> String'.
+
+Similarly
+read :: Read a => String -> a
+BUT READ IS UNSAFE
+instead you should use Text.Read.readMaybe :: Read a => String -> Maybe a
+
+Show examples.
+Explain why type annotations might be necessary.
+
+
+- Crypto messages.
+
+Bring up slides for knowledge proofs.
+** DONE get all the relevant documents together to get my contract in order
+   CLOSED: [2017-02-23 Thu 09:19]
+Contract (my signed version)
+The envellope to put it in,
+where to post it. -> human resources
+** DONE post the letter on the way out at schwamendingenplatz
+   CLOSED: [2017-02-23 Thu 23:21]
+** DONE see if the automation still works
+   CLOSED: [2017-02-24 Fri 11:34]
+Nope, it doesn't
+** DONE for dmitriy to respond about the api
+   CLOSED: [2017-02-26 Sun 19:52]
+** DONE for herman to update codeboard.ethz.ch
+   CLOSED: [2017-02-28 Tue 12:27]
+** DONE grade the first assignments
+   CLOSED: [2017-02-28 Tue 11:04] SCHEDULED: <2017-02-27 Mon>
+** DONE prepare the second lecture
+   CLOSED: [2017-02-28 Tue 12:27] DEADLINE: <2017-03-01 Wed>
+   :LOGBOOK:
+   CLOCK: [2017-02-28 Tue 11:06]--[2017-02-28 Tue 12:27] =>  1:21
+   :END:
+
+*** Mistakes on codeboard from this week
+
+Common mistakes from the codeboard submission:
+- Haskell uses camel casing, not snake casing
+- Use spaces.
+- Tiny details: the wrong rule name, even if used right. get them right on the exam.
+- Evaluating too quickly
+fiblouis needs to inspect argument, but next doesn't.
+teach about pattern matching on integers.
+- Prooftrees went very well.
+
+*** Q&A
+Q&A:
+
+First; do we have any more questions?
+
+- Why use IO data and not just make IO primitive?
+
+Because then you can defined your own control structures:
+
+forLoop :: Int -> IO () -> IO ()
+forLoop 0 _ = pure ()
+forLoop n a = do
+  a
+  forLoop (n - 1) a
+
+Because then you can do really fancy stuff like automatic paralellisation
+of independent IO actions.
+
+*** This week
+
+This week is mostly about mathematical reasoning, after this week it will be mostly Haskell.
+Have a look at this blogpost too:
+https://cs-syd.eu/posts/2016-05-07-mathematical-induction.html
+
+
+*** Preparations
+
+**** Exercise 1:
+
+- Alpha conversion or bound variable renaming
+forall a. p(a)
+ -> forall x. p(x)
+
+these names are just placeholders. They're not really names.
+
+but, what if you have
+forall a. p(a, x)
+and change it to
+forall x. p(x, x), then what?
+
+The problem is usually explained with the concept of free variables.
+But that makes it rather complicated.
+Instead, use different notation for bound variables and you'll never make a mistake.
+
+**** Exercise 2:
+
+- Find a model of a forumla
+
+exists e. p(x)
+forall a. p(a)
+
+Remember, a predicate is just a subset.
+
+A = (U_A, I_A) 
+where U_A = {a, b, c}
+and  I_A(p) = {a}
+
+Not easy in general, but you will get easy examples
+
+**** Exercise 3
+
+More proof trees, now with a predicate logic
+
+Explain forall I and forall E
+slide 32 of https://www.ethz.ch/content/dam/ethz/special-interest/infk/inst-infsec/information-security-group-dam/education/ss2017/fmfp/w1-nd.pdf
+The side conditions are essential.
+Explain how to write it down.
+
+
+**** Extra exercises on proof trees.
+
+<Make sure to look at the solutions>
+
+** DONE for the second lecture
+   CLOSED: [2017-03-02 Thu 12:18] SCHEDULED: <2017-03-01 Wed>
+** DONE grade the second assignments
+   CLOSED: [2017-03-07 Tue 11:52] SCHEDULED: <2017-03-06 Mon>
+** DONE prepare the third lecture 
+   CLOSED: [2017-03-09 Thu 11:40] DEADLINE: <2017-03-08 Wed>
+
+"Pure Non-Strict Statically Typed Algebraic Applicative Programming
+*** Common mistakes:
+
+- Not using the subset notation for predicates, makes it harder to come up with a model and to grade.
+- 'this structure is not satisfiable.'
+-  q(y)=True, if y=c -> That's not the definition of a predicate.
+  Also: No formula's in a sentence.
+- Spaces in code!!
+- assignment 2.2 'free' variable on the right is not free.
+- Not reading the assignment carefully: You don't get to choose the universe in assignment 2.
+- For some reason some people don't write down the rule when they use ¬E.
+- Use consistent indentation. Refer to the wikibooks article again.
+
+
+Today: Induction proofs and list programming.
+Any other requests?
+
+*** Induction proofs and how to write them down
+
+You have done proofs before.
+The proofs we give you are trivial, what we are trying to teach you is how to write them down well.
+
+See this:
+https://cs-syd.eu/posts/2016-05-07-mathematical-induction.html
+
+*** Lists 
+
+**** basic function
+
+head, tail, init, last
+Note: These functions are UNSAFE.
+In production, you use headMay, tailMay, initMay and lastMay.
+
+map, filter, foldl, ++, length, reverse
+
+List comprehensions:
+They exist, but we don't use them in production because they don't compose very well.
+
+**** Some exercises we can do in class:
+
+- Infinite list of the same element:
+
+repeat :: a -> [a]
+repeat a = a : repeat a
+
+- Infinite list of the same list concatenated with itself:
+
+cycle :: [a] -> [a]
+cycle as = as ++ cycle as
+
+- Concatenate a list of lists:
+
+concat :: [ [a] ] -> [a]
+concat = foldl (++) []
+
+- Cross product of two lists: 
+
+  cartProd :: [a] -> [b] -> [(a, b)]
+  cartProd = liftM2 (,)
+
+- All subsequences of a list.
+
+-- | The 'subsequences' function returns the list of all subsequences of the argument.
+--
+-- > subsequences "abc" == ["","a","b","ab","c","ac","bc","abc"]
+subsequences            :: [a] -> [[a]]
+subsequences xs         =  [] : nonEmptySubsequences xs
+
+-- | The 'nonEmptySubsequences' function returns the list of all subsequences of the argument,
+--   except for the empty list.
+--
+-- > nonEmptySubsequences "abc" == ["a","b","ab","c","ac","bc","abc"]
+nonEmptySubsequences         :: [a] -> [[a]]
+nonEmptySubsequences []      =  []
+nonEmptySubsequences (x:xs)  =  [x] : foldr f [] (nonEmptySubsequences xs)
+  where f ys r = ys : (x : ys) : r
+** DONE Grade the third assignments
+   CLOSED: [2017-03-13 Mon 10:03] SCHEDULED: <2017-03-13 Mon>
+   :LOGBOOK:
+   CLOCK: [2017-03-13 Mon 07:58]--[2017-03-13 Mon 10:03] =>  2:05
+   :END:
+** DONE Prepare the fourth lecture
+   CLOSED: [2017-03-17 Fri 07:53] DEADLINE: <2017-03-15 Wed>
+   - State "WAITING"    from "NEXT"       [2017-03-17 Fri 07:53]
+*** Common mistakes
+
+- Sending in the proof on paper!
+Non-tree formed proof should be submitted in text.
+
+- Getting the natural induction rule wrong:
+
+ G |- P(0)         G |- Forall n:Nat. P(n) -> P(n+1)
+-----------------------------------------------------
+             G |- Forall n:Nat. P(n)
+
+Most forget the 'forall' somewhere.
+
+Forgetting a 'forall' is wrong because n could be a free variable in G.
+
+- Not stating the set for induction
+- Not stating the predicate for induction?
+- If you say 'induction on the length of the list', then you have to actually induce over natural numbers.
+  I won't be so annoying as to say you have to induce over integers, but I could!
+
+- Not defining 'n'.
+
+Use 'let n be an arbitrary natural number'.
+
+- Defining 'n' after you've used it.
+
+- Induction on 'n' instead of induction on 'N'.
+
+- Forgetting the conclusion
+
+
+- Assuming that n+1 is positive
+You have to write down why it's not positive.
+
+- NO FORMULA'S IN SENTENCES
+
+Assume P(n) for arbitrary n.
+To assume a formula doesn't mean anything.
+You have to write something like 'Assume that P(n) holds.'
+
+- 'define n \in Nat'.
+That's not a definition. n \in Nat is a boolean expression.
+
+- No snake case, use camel case!
+
+- if x then True else False
+
+- Not using enough spaces in list comprehensions
+  Spaces around '..'.
+- Not using pattern matching:
+
+> isASpace :: Char -> Bool
+> isASpace c
+>  | c == ' ' = True
+>  | otherwise = False
+
+- Not using pointfree notation
+ 
+countWords s = length (toWords s)
+
+- No using 'zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]'
+
+- firstPrimes :: Int -> [Int]
+  firstPrimes m = ?
+how about 'take m primes'?
+
+*** Common non-mistakes that I expected to be mistakes
+- Most figured out 'fromIntegral'. Who didn't understand why you need 'fromIntegral'?
+- Everyone got he 'palindromes' exercise correct.
+
+*** Explaining induction again:
+
+Who wants to have their submission critisized?
+
+
+*** Today:
+
+- type synonyms and data types
+- Some exercises with lists
+
+all :: (a -> Bool) -> [a] -> Bool
+exists :: (a -> Bool) -> [a] -> Bool.
+
+
+- weak/strong induction, structural induction
+- Pointfree notation
+- Dollar, and why would you use it
+  
+** DONE grade the fourth assignment
+   CLOSED: [2017-03-20 Mon 10:30] DEADLINE: <2017-03-17 Fri> SCHEDULED: <2017-03-20 Mon>
+   :PROPERTIES:
+   :Effort:
+   :END:
+** DONE prepare the fith lecture
+   CLOSED: [2017-03-22 Wed 12:46] DEADLINE: <2017-03-22 Wed>
+*** Common mistakes
+- filter (\(x, y) -> y == True
+- filter (== True) (map even xs)
+- if n `mod` sum (aux n []) == 0 then True else False
+- Rather unelegant uncomposable implementations.
+  Try and do the simplest thing that works.
+  sum of digits? sum . digits
+- Not checking things yourself. You can check types with ghci.
+- The proof with two lists.
+
+*** How to find the type of an expression
+
+
+*** Type classes
+
+What are they for
+What are they
+How do I make them?
+How do I use them?
+** DONE grade the fifth assignment
+   CLOSED: [2017-03-27 Mon 20:37] SCHEDULED: <2017-03-27 Mon>
+   - State "DONE"       from "READY"      [2017-03-27 Mon 20:37]
+** TODO prepare the sixth lecture
+   DEADLINE: <2017-03-29 Wed>
+
+Are you excited?
+Today is my second to last lecture,
+
+*** Common-mistakes
+
+- Not checking in ghci.
+- Assuming that (a,b) is not in Num. (not a problem in mini-haskell.)
+- No type level currying: 'a -> b -> (a, b)' is '(,)'
+- Not using foldProp enough.
+- bfs too complicated: do this in class.
+Make it really simple.
+- Using 'undefined' when making an example of a function given a type is cheating
+- Not using the scoping of helper functions to your advantage
+- If you're using partial functions, it's probably wrong: (!!), head, tail, etc
+- Handing in on paper
+
+*** Common non-mistakes
+- flip id went well.
+- The typing exercises went so much better than last year!
+
+*** What today is about
+
+This week's assignment doesn't have anything new, so we'll focus on other things this session
+
+- Last week's exercises in class.
+- Lazy versus eager evaluation
+- Whatever you want here, if anything is unclear
+- Functors, if you want
+
+Next week is going to be mostly repitition of the first half of the semester.
+
+*** Things from the last sheet explained
+
+Here are some things from the last sheet that I could be explaining.
+Would this be valuable to you?
+
+**** Propositions
+
+> data Prop a = PVar a | Not (Prop a)
+>             | And (Prop a) (Prop a) | Or (Prop a) (Prop a)
+>               deriving Show
+
+
+> foldProp :: (a -> b)          -- Var
+>          -> (b -> b)          -- Not  
+>          -> (b -> b -> b)     -- And
+>          -> (b -> b -> b)     -- Or
+>          -> Prop a -> b
+> foldProp fVar fNot fAnd fOr = go
+>   where go (PVar name) = fVar name
+>         go (Not x)     = fNot (go x)
+>         go (And x y)   = fAnd (go x) (go y)
+>         go (Or  x y)   = fOr  (go x) (go y)
+
+> evalProp :: (a -> Bool) -> (Prop a -> Bool)
+> evalProp v = foldProp v not (&&) (||)
+
+> propVars :: Eq a => Prop a -> [a]
+> propVars = foldProp (\x -> [x]) id union union
+
+> satProp :: Eq a => Prop a -> Bool
+> satProp p = any (\f -> evalProp f p) assg
+>   where assg = map (flip elem)
+>                    (pow (propVars p))
+
+> pow :: [a] -> [[a]]
+> pow [] = [[]]
+> pow (x:xs) = let a = pow xs in map (x:) a ++ a
+
+**** BFS
+
+> bfs :: Tree a -> [a]
+> bfs x = traverse [x]
+
+> traverse :: [Tree a] -> [a]
+> traverse [] = []
+> traverse ts = rootlabels ++ traverse (concatMap children ts)
+>     where rootlabels = [ x | Node x _ _ <- ts]
+>           children Leaf         = []
+>           children (Node _ l r) = [l,r]
+
+*** Eager versus lazy evaluation
+
+Simple example:
+
+(%x. x) (%x. (%y. y) x)
+
+**** Eager
+     (%x. x) (%x. (%y. y) x) =
+     (%x. x) (%x. x) =
+     (%x. x)
+
+**** Lazy
+     (%x. x) (%x. (%y. y) x) =
+     (%x. (%y. y) x)

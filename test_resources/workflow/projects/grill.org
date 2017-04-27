@@ -1,0 +1,12 @@
+* Grill
+
+The aim is to sell the grill
+
+** DONE Prepare a description of the grill
+   CLOSED: [2017-02-23 Thu 10:25]
+** DONE try to sell it second-hand on the fb group
+   CLOSED: [2017-02-23 Thu 10:25]
+** CANCELLED for a reply on the group
+   CLOSED: [2017-02-25 Sat 22:55]
+** READY do this again in summer
+   SCHEDULED: <2017-07-01 Sat>

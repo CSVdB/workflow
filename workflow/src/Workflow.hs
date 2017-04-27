@@ -5,14 +5,13 @@
 
 module Workflow where
 
-import Data.Attoparsec.Text
-import Data.Either
-import Data.Maybe
+import Data.Attoparsec.Text hiding (takeWhile)
 import Data.OrgMode.Parse
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Data.Time.Clock
+import Data.Time.Format
 import Data.Tuple
 import Import
 import Workflow.OptParse
@@ -28,9 +27,7 @@ execute (DispatchWaiting workflowPath) = waiting workflowPath
 waiting :: Path Abs Dir -> Settings -> IO ()
 waiting workflowPath _ = do
     (waitingHeadings, _) <- getWaitingHeadings workflowPath Settings
-    let tasks = catMaybes $ fmap toTask waitingHeadings
-    let sortedTasks = sortOn date tasks
-    output <- mapM toString sortedTasks
+    output <- getOutput waitingHeadings
     mapM_ putStrLn output
 
 getWaitingHeadings :: Path Abs Dir
@@ -45,6 +42,13 @@ getWaitingHeadings workflowPath _ = do
     let errMess = concat errorMessages
     pure (filter (isWaiting . fst) headings, errMess)
 
+getOutput :: [(Heading, Path Rel File)] -> IO [String]
+getOutput waitingHeadings =
+    let tasks =
+            reverse $
+            sortOn date $ catMaybes $ fmap toWaitingTask waitingHeadings
+    in mapM toString tasks
+
 filesIO :: Path Abs Dir -> IO [Path Abs File]
 filesIO workPath = do
     (_, files) <- listDirRecur workPath
@@ -57,12 +61,13 @@ getContent filePath = do
     pure (content, filename filePath)
 
 isWaiting :: Heading -> Bool
-isWaiting Heading {..} = keyword == Just (StateKeyword "WAITING")
+isWaiting Heading {..} =
+    keyword == Just StateKeyword {unStateKeyword = "WAITING"}
 
 toString :: WaitingTask -> IO String
 toString WaitingTask {..} =
     let file = fromRelFile orgFile
-        output = file ++ ": " ++ "WAITING for an update from " ++ descr
+        output = file ++ ": " ++ "WAITING " ++ description
     in case date of
            Nothing -> pure output
            Just realDate -> do
@@ -79,26 +84,30 @@ nominalDay = 86400
 data WaitingTask = WaitingTask
     { date :: Maybe UTCTime
     , orgFile :: Path Rel File
-    , descr :: String
+    , description :: String
     } deriving (Show, Eq)
 
-toTask :: (Heading, Path Rel File) -> Maybe WaitingTask
-toTask (heading, filePath) =
+toWaitingTask :: (Heading, Path Rel File) -> Maybe WaitingTask
+toWaitingTask (heading@Heading {..}, filePath) =
     if isWaiting heading
-        then let (date, descr) = getDateAndText heading
-             in Just $ WaitingTask date filePath descr
+        then let date = getDate heading
+             in Just $ WaitingTask date filePath (T.unpack title)
         else Nothing
 
-getDateAndText :: Heading -> (Maybe UTCTime, String)
-getDateAndText Heading {..} =
-    let (description, rest) = T.span (/= '[') title
-    in if T.length rest == 0
-           then (Nothing, T.unpack description)
-           else let date = T.takeWhile (/= ']') $ T.tail rest
-                in (formatDate date, T.unpack description)
+getDate :: Heading -> Maybe UTCTime
+getDate Heading {..} =
+    let stringDate =
+            between (/= '[') (/= ']') $ T.unpack $ sectionParagraph section
+        format = "%F %a %R"
+    in parseTimeM True defaultTimeLocale format stringDate
 
-formatDate :: Text -> Maybe UTCTime
-formatDate _ = undefined
+between :: (a -> Bool) -> (a -> Bool) -> [a] -> [a]
+-- Extracts the sublist strictly between the first element which doens't satisfy
+-- begin and the first one after that doesn't satisfy end.
+between begin end list =
+    case dropWhile begin list of
+        [] -> []
+        _:xs -> takeWhile end xs
 
 getHeadings :: (Text, Path Rel File) -> Either String [(Heading, Path Rel File)]
 getHeadings (content, file) =
@@ -106,24 +115,21 @@ getHeadings (content, file) =
         Left errMess -> Left errMess
         Right doc -> Right $ addSth (docToHeading doc) file
 
-addSth
-    :: forall a b.
-       ([a] -> b -> [(a, b)])
+addSth :: [a] -> b -> [(a, b)]
 addSth [] _ = []
 addSth (x:xs) addition = (x, addition) : addSth xs addition
 
 docToHeading :: Document -> [Heading]
 docToHeading doc =
     let topHeadings = documentHeadings doc :: [Heading]
-    in getAllHeadings topHeadings
-
-getAllHeadings :: [Heading] -> [Heading]
-getAllHeadings [] = []
-getAllHeadings (x:xs) = x : getAllHeadings (subHeadings x ++ xs)
+        addSubHeadings list x = list ++ [x] ++ subHeadings x
+    in foldl' addSubHeadings [] topHeadings
 
 getDocument :: Text -> Either String Document
 getDocument content =
-    let parser = parseDocument ["WAITING", "TODO", "CANCELLED", "DONE", "READY"]
+    let parser =
+            parseDocument
+                ["WAITING", "TODO", "CANCELLED", "DONE", "READY", "NEXT"]
         result = parseOnly parser content :: Either String Document
     in case result of
            Left errorMessage -> Left errorMessage

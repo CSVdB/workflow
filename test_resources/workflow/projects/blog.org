@@ -1,0 +1,95 @@
+* Blog
+I'd like to start writing again, maybe not every week like before, but every month should be possible.
+I'd like to start it again with 12 posts in backlog.
+They need to be divided into timeless posts and time-specific posts.
+Then the time-specific posts can be posted sooner
+** Tasks
+*** CANCELLED Get let's encrypt for cs-syd.eu
+ *  CLOSED: [2017-01-14 Sat 13:42]
+*** DONE rebuild blog and most dependencies with a working build system   
+ *  CLOSED: [2016-12-08 Thu 11:45]
+*** DONE Peer to peer mentorship page
+    CLOSED: [2017-03-26 Sun 04:14]
+    - State "DONE"       from "TODO"       [2017-03-26 Sun 04:14]
+**** DONE write a bit of text about why I want to do peer mentorship
+     CLOSED: [2017-03-26 Sun 04:14]
+     - State "DONE"       from "NEXT"       [2017-03-26 Sun 04:14]
+*** TODO redirect tijl.kerckhove.xyz to tijlkerckhove.com
+*** TODO redesign the website, taking full advantage of bootstrap
+** Next blogpost to publish
+*** TODO put something here once the backlog grows big enough.
+** Blogposts backlog [2/2]
+*** DONE The annoyance of twelve-hour clocks
+    CLOSED: [2017-02-20 Mon 17:29]
+**** DONE rewrite the annoyance of twelve-hour clocks
+     CLOSED: [2017-02-20 Mon 17:29]
+*** DONE The madness of paths
+    CLOSED: [2017-02-23 Thu 12:11]
+**** DONE Write a first draft of the madness of paths.
+   CLOSED: [2017-02-20 Mon 19:22]
+**** DONE for feedback
+     CLOSED: [2017-02-22 Wed 17:54]
+**** DONE go through henk's feedback
+     CLOSED: [2017-02-23 Thu 12:11]
+*** TODO automate and tighten your feedback loop -> --file-watch
+**** NEXT write a first draft of tightening your feedback loop
+** Ideas
+*** TODO languages must die list
+*** TODO Research as a build system
+*** TODO the problem with asking for an address
+*** TODO Set up build system for the website (and recursively downwards too, hopefully)
+*** TODO Set up CI for the website
+*** TODO The victim game
+T*he victim game: reward for being a victim is higher than the reward for not having a problem -> people will tend toward being the victim as early as possible 
+*** TODO The problem with total constructors                                                                                                                                                               
+Blog: the problem with constructors: they are rarely total                                                                                                                                    
+                                                                                                                                                                                              
+There needs to be a distinction between setting the values and finishing the creation. There must be room for failure.                                                                        
+                                                                                                                                                                                              
+Haskell does this well with smart constructors, but the community doesnt do it very well.                                                                                                     
+Ironically, java does it very well if checked exceptions are used.  
+*** TODO Ikea: horrible customer service
+ALso: Kinesis, the router people, the other router people
+5 calls:
+
+- First call:
+Waiting for 15 minutes
+
+Me: I got the wrong product.
+Ikea: Please hold
+I hold for 45 minutes and am then disconnected.
+
+Total time wasted: 60 minutes
+
+- Second call:
+Waiting for 5 minutes
+
+Picks up, asks me to hold after giving my details
+
+- Third call on monday at 1800, when the packet was supposed to arrive
+Oh there was a delay, it will arrive today though
+- Fourth call on tuesday at 0800, to ask about the status
+'oh I cannot tell you before the shop opens at 0900, but I will call you back'
+- Fifth call on tuesday at 10:
+no answer after 26 minutes
+- Sixth call:
+will call me back in the next 30 minutes.A
+
+Never called back
+- Seventh call:
+Waited for 3 minutes, then back on hold for an hour, after which I was disconnected
+- Eighth call:
+Waited for 20 minutes, no response
+- Ninth call:
+Connected after 5 minutes, connected me through to the dietlicon, spoke to me in german instead of english, while they know I speak english
+
+Finally got my package on tuesday at 14.
+
+Find out I paid 20 CHF to make those calls because it's a premium number!!
+
+*** TODO A case against backward compatibility
+*Just use the older version if you don't want to upgrade, don't hold the rest back please.
+*** TODO If you are not early then you are late
+*** TODO convert to a cheaper hosting service Amazon lightsail, digital ocean or something
+*** TODO error messages are the main interaction with the compiler, optimise for it.
+*** TODO you cannot fight sexism with more sexism

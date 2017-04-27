@@ -1,0 +1,69 @@
+* Validity                                                      :programming:
+** DONE separate GenValidity, GenInvalidity and GenUnchecked.
+   CLOSED: [2017-01-06 Fri 01:03]
+** DONE up the version bounds for quickcheck and hspec as discussed on the issue
+   CLOSED: [2017-01-06 Fri 01:17]
+** DONE Fully implement genvalidty-hspec-aeson
+   CLOSED: [2017-01-06 Fri 01:15]
+** DONE have a look at the pull request on github
+   CLOSED: [2017-01-06 Fri 01:17]
+** DONE add a load of property tests to genvalidity now that that's possible with all-valid values.
+   CLOSED: [2017-01-09 Mon 19:39]
+** DONE Finish up genvalidity-hspec-aeson with a bunch of doctest properties
+   CLOSED: [2017-01-09 Mon 19:39]
+** DONE Add loads more property tests to genvalidity-hspec.
+   CLOSED: [2017-01-09 Mon 19:39]
+** DONE remove the proxies
+   CLOSED: [2017-01-09 Mon 20:48]
+** DONE Remove the proxiese in genvalidity-hspec.
+   CLOSED: [2017-01-09 Mon 22:49]
+** DONE update the hastory code to work with the new version of validity
+   CLOSED: [2017-01-10 Tue 20:24]
+** DONE Make a 'hastory change-directory' command that outputs the directory to change to. :q:
+   CLOSED: [2017-01-12 Thu 16:14]
+** DONE Make a 'hastory generate-change-wrapper-script' command that outputs a script to wrap the hastory change-directory command in a bash function.
+   CLOSED: [2017-01-12 Thu 22:14]
+** CANCELLED Make bash completion for 'hastory change'. with optarse applicative.
+   CLOSED: [2017-01-13 Fri 18:36]
+** CANCELLED Figure out if I can make a completer for 'f'.
+   CLOSED: [2017-01-13 Fri 23:22]
+** DONE make functorSpec
+   CLOSED: [2017-01-14 Sat 13:04]
+** DONE make applicativeSpec
+   CLOSED: [2017-01-17 Tue 23:56]
+** DONE make monadSpec
+   CLOSED: [2017-01-17 Tue 23:56]
+** DONE make genvalidity-hspec-cereal
+   CLOSED: [2017-01-18 Wed 13:56]
+** DONE make genvalidity-time
+   CLOSED: [2017-02-07 Tue 17:54]
+** DONE for a response on my hspec issue.
+   CLOSED: [2017-02-09 Thu 20:09]
+** DONE make sure wrong instances actually get caught with tests.
+   CLOSED: [2017-02-09 Thu 21:15]
+It seems I need a way to tell hspec that this subtree should fail.
+** CANCELLED check out issue #5, see if it's good for me
+   CLOSED: [2017-03-09 Thu 11:08]
+** CANCELLED for sjakobi to put back the options that I complained about.
+   CLOSED: [2017-03-09 Thu 11:08]
+** CANCELLED Split genvalidity-hspec up into genvalidity-property and genvalidity-hspec
+   CLOSED: [2017-03-10 Fri 18:37]
+** DONE make genvalidity-bytestring
+   CLOSED: [2017-03-16 Thu 08:03]
+** DONE split genvalidity-hspec into genvalidity-property
+   CLOSED: [2017-03-16 Thu 08:35]
+** DONE look into the version bounds for all the validity packages, and have travis configs for them.
+   CLOSED: [2017-03-16 Thu 09:14]
+** DONE look into running builds for all packages for as many stack-configs as possible, even if running the tests is not possible.
+   CLOSED: [2017-03-19 Sun 21:47]
+** DONE make genvalidity-hspec-binary
+   CLOSED: [2017-03-21 Tue 16:08]
+   - State "DONE"       from "TODO"       [2017-03-21 Tue 16:08]
+** DONE review genvalidity-hspec-binary
+   CLOSED: [2017-03-23 Thu 13:18]
+   - State "DONE"       from "NEXT"       [2017-03-23 Thu 13:18]
+** DONE make genvalidity-hspec-hashable
+   CLOSED: [2017-03-27 Mon 21:39]
+   - State "DONE"       from "TODO"       [2017-03-27 Mon 21:39]
+** WAITING for nick to review his own PR
+** TODO figure out whether I can get the validity's on stackage

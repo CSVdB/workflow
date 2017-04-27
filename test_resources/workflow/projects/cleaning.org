@@ -1,0 +1,35 @@
+* Cleaning
+
+** DONE for a reply from zuriclean
+   CLOSED: [2017-03-22 Wed 14:33]
+** DONE for a reply from zurich cleaning
+   CLOSED: [2017-03-22 Wed 14:34]
+** DONE for a reply from zurich cleaning
+   CLOSED: [2017-03-22 Wed 19:49]
+   - State "DONE"       from "WAITING"    [2017-03-22 Wed 19:49]
+** DONE buy the correct cleaning supplies
+   CLOSED: [2017-03-23 Thu 17:54]
+   - State "DONE"       from "NEXT"       [2017-03-23 Thu 17:54]
+- 3 cleaning products Detergent, descaling agent, WC-disinfectant
+- 1 vacuum Allows to clean all surfaces
+- 1 floor maintenance kit Bucket, mop, dustpan and brush
+- Duster & the following products: 1 pair of gloves, 1 microfiber, 2 rags, 2 dishclothes, 2 sponges
+** DONE schedule the first cleaning with batmaid.ch
+   CLOSED: [2017-03-23 Thu 18:13]
+   - State "DONE"       from "NEXT"       [2017-03-23 Thu 18:13]
+** DONE have a look at what I need to do for the mandate thingy
+   CLOSED: [2017-03-26 Sun 04:23]
+   - State "DONE"       from "NEXT"       [2017-03-26 Sun 04:23]
+** DONE get the cleaning done on monday
+   CLOSED: [2017-03-27 Mon 21:32]
+   - State "DONE"       from "READY"      [2017-03-27 Mon 21:32]
+** DONE give feedback to batmaid
+   CLOSED: [2017-03-28 Tue 09:53]
+   - State "DONE"       from "NEXT"       [2017-03-28 Tue 09:53]
+** DONE ask them about the madate via email
+   CLOSED: [2017-03-28 Tue 09:54]
+   - State "DONE"       from "TODO"       [2017-03-28 Tue 09:54]
+** WAITING for a response about the mandate
+   - State "WAITING"    from "TODO"       [2017-03-28 Tue 09:54]
+** TODO for next time, try this voucher:
+JKzbNU

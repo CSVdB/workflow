@@ -1,0 +1,43 @@
+* Phone
+Goal: Get a new phone and my old phone repaired
+
+** DONE for a response about the price of a repair
+   CLOSED: [2017-03-16 Thu 10:20]
+** DONE Figure out what I need to do with the old phone to send it, figure out the address
+   CLOSED: [2017-03-17 Fri 14:07]
+** CANCELLED prepare the phone for repair
+   CLOSED: [2017-03-19 Sun 21:35]
+- Get all data off it
+  
+Looks like that's not going to work until I have my new phone, because I need to be able to receive new
+** DONE schedule gong to school to print the required documents
+   CLOSED: [2017-03-19 Sun 21:35]
+** DONE print the required documents                                  :print:
+   CLOSED: [2017-03-19 Sun 21:35]
+- moto_g_order.pdf
+- moto_g_invoice.pdf
+- openDoc.pdf
+- the packaging list
+** DONE to track:
+   CLOSED: [2017-03-19 Sun 21:35]
+https://service.datrepair.de/customer
+Zip code: 8051
+IMEI number: 358203070464902
+** DONE Schedule going to the post office to send my phone
+   CLOSED: [2017-03-19 Sun 21:44]
+** DONE send my phone to this address: TODO fill in
+   CLOSED: [2017-03-19 Sun 21:44] 
+** DONE for my new phone to arrive in the mail.
+   CLOSED: [2017-03-25 Sat 17:58] SCHEDULED: <2017-04-11 Tue>
+   - State "DONE"       from "WAITING"    [2017-03-25 Sat 17:58]
+** CANCELLED for my phone to be repaired.
+   CLOSED: [2017-03-27 Mon 21:37]
+   - State "CANCELLED"  from "WAITING"    [2017-03-27 Mon 21:37]
+** WAITING for a response from vertrieb@
+   - State "WAITING"    from "TODO"       [2017-03-25 Sat 17:58]
+** CANCELLED Decide whether I want to get my phone repaired
+   CLOSED: [2017-03-27 Mon 21:52]
+   - State "CANCELLED"  from "NEXT"       [2017-03-27 Mon 21:52]
+** WAITING to get a reply from them dat repair
+   - State "WAITING"    from "TODO"       [2017-03-28 Tue 10:44]
+** TODO Decide whether I want to get my phone repaired

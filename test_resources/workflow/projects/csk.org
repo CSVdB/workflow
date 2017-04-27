@@ -1,0 +1,83 @@
+* CS Kerckhove
+
+Started company on DEC 6 2016
+
+Useful quote:
+also, you see a value chain, I'd rather earn a bit less and do cool shit than have to occupy myself with things like administration. I hate administration, and I suck at it. I want to do things I'm good at and be appreciated for doing so
+
+** DONE make a 'services' page that lines out what I can do for clients. 
+   CLOSED: [2017-01-14 Sat 13:27]
+** DONE for my second paycheck.
+   CLOSED: [2017-02-18 Sat 12:30]
+** DONE schedule going to the kreisbureau
+   CLOSED: [2017-02-20 Mon 16:04]
+** DONE go to the kreisbureau and ask about a long-term work visa via my self-employment.
+   CLOSED: [2017-02-20 Mon 16:03]
+bring my company number.
+It's possible, but only after my studies
+** DONE to print the documents at the university                      :print:
+   CLOSED: [2017-02-23 Thu 16:17]
+** DONE schedule going to the tax office and the social security office
+   CLOSED: [2017-02-26 Sun 20:05]
+bring documents about csk and invoices.
+** DONE go to the tax office to ask what I should do.                :zurich:
+   CLOSED: [2017-03-02 Thu 12:17] SCHEDULED: <2017-03-01 Wed>
+Tell them about my new income
+Ask about Nick becoming an employee
+** CANCELLED go to the social security office to ask what I should do. :zurich:
+   CLOSED: [2017-03-02 Thu 12:17] SCHEDULED: <2017-03-01 Wed>
+Tell them about my new income
+Ask about Nick becoming an employee
+** DONE figure out what I need to do at the tax office
+   CLOSED: [2017-03-07 Tue 11:46]
+** CANCELLED to get a reply from the new client.
+   CLOSED: [2017-03-07 Tue 11:49]
+** CANCELLED schedule going to the tax office
+   CLOSED: [2017-03-09 Thu 11:35]
+** DONE for nick to see if he can work for me
+   CLOSED: [2017-03-09 Thu 17:56]
+** DONE in contract for nick:
+   CLOSED: [2017-03-09 Thu 18:07]
+Start date
+end date
+notice period
+sallary
+** DONE for nick to respond to the contract
+   CLOSED: [2017-03-18 Sat 17:27]
+   - State "WAITING"    from "TODO"       [2017-03-09 Thu 19:19]
+** DONE call the tax office: 043 259 40 50                             :call:
+   CLOSED: [2017-03-10 Fri 07:59]
+** DONE call the tax office: 043 259 40 50                             :call:
+   CLOSED: [2017-03-10 Fri 08:19]
+** DONE call the tax office: 043 259 40 50                             :call:
+   CLOSED: [2017-03-13 Mon 13:45] SCHEDULED: <2017-03-13 Mon>
+** DONE call the tax office: 043 259 40 50                             :call:
+   CLOSED: [2017-03-13 Mon 14:23] SCHEDULED: <2017-03-13 Mon>
+** DONE call the tax office: 043 259 40 50                             :call:
+   CLOSED: [2017-03-13 Mon 14:33]
+Ask to get an email address to talk to a human
+** DONE Email the KSTA
+   CLOSED: [2017-03-18 Sat 17:26]
+Mirkovic
+0432593290
+miroslava.mirkovic@ksta.zh.ch
+
+Odathekal
+0432595053
+
+Olouthlin
+0432593776
+** DONE Go to the tax office
+   CLOSED: [2017-03-18 Sat 17:27]
+Bring: Residence permit
+eth job documents
+csk documents
+** WAITING for a piece of paper from the tax office about 2016
+   - State "WAITING"    from "TODO"       [2017-03-18 Sat 17:27]
+** WAITING for a piece of paper from the tax office about 2017
+** NEXT schedule going to the post office to send the SVA letter
+** TODO post the SVA letter
+** TODO GO back to the SVA office when:
+- I employ someone IN SWITZERLAND
+- I make something other than exactly 9K CHF as a self-employed contractor this year
+- I leave switzerland or otherwise cancel my company

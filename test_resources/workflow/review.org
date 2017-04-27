@@ -1,0 +1,70 @@
+* Collect inbox
+Turn on a song and do nothing else until this is done.
+
+Collect ALL possible inbox items BEFORE going on to the next point.
+
+- Clean up and collect from
+  - House
+    - BedRoom
+      - Gather all dirty clothes
+      - Top of Desk
+      - Downloads folder
+        Gather then clear
+  - Computer
+    - Emails
+      Look through your email inbox and move everything to 'reply', 'review' or 'ref'
+    - Google drive
+    - Calendar
+      - Past
+      - Future
+    - Contacts
+      - Remove as many as possible
+      - Remove duplicates
+    - Bookmarks
+    - Home directory
+      Remove as much as possible
+      Make sure git repos's aren not dirty
+    - Sydbox
+  - Backpack
+    - Gather and empty
+  - Wallet
+    - Remove as much as possible
+    - Make sure I don't have change or I'll spend it at uni
+    - Check up on expiry date of all cards
+* Read journal
+* Process inbox
+- Email:
+  - Go through the read and reply email.
+  - Check up on the 'waiting' emails: Still waiting for them?
+  - Check if the 'ref' emails are still relevant.
+- Paper inbox
+- inbox.org
+- Google keep
+  Make sure this is empty
+- Github issues:
+Issues for me: https://github.com/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+user%3ANorfairKing+
+Issues authored by me: https://github.com/issues
+* Next actions
+- Go through each project, make sure that they all have a NEXT action or a WAITING action
+* Check progress
+- Summary the progress I made since the last review in a journal entry.
+* Someday/maybe
+- Read through
+* Archive/cleanup
+- Archive done projects
+- Remove as many projects as possible
+  - Is the project still alligned with my goals?
+  - Is the project still worth my time?
+* Review control pannel
+* Remove mental clutter as much as possible.
+Install blockers for:
+Facebook
+Reddit
+Funnyjunk
+Linedin
+Hackernews
+ 
+Just block them entirely.
+I'll use my phone if I need to access these urgently
+Also messenger?
+  
