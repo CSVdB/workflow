@@ -25,10 +25,19 @@ execute :: Dispatch -> Settings -> IO ()
 execute (DispatchWaiting workflowPath) = waiting workflowPath
 
 waiting :: Path Abs Dir -> Settings -> IO ()
-waiting workflowPath _ = do
-    (waitingHeadings, _) <- getWaitingHeadings workflowPath Settings
-    output <- getOutput waitingHeadings
-    mapM_ putStrLn output
+waiting workflowPath settings@Settings {..} = do
+    (waitingHeadings, errMess) <- getWaitingHeadings workflowPath settings
+    case shouldPrintSettings of
+        Error -> die errMess
+        Warning -> do
+            putStrLn errMess
+            output waitingHeadings
+        Not -> output waitingHeadings
+
+output :: [(Heading, Path Rel File)] -> IO ()
+output waitingHeadings = do
+    result <- getOutput waitingHeadings
+    mapM_ putStrLn result
 
 getWaitingHeadings :: Path Abs Dir
                    -> Settings
@@ -67,15 +76,15 @@ isWaiting Heading {..} =
 toString :: WaitingTask -> IO String
 toString WaitingTask {..} =
     let file = fromRelFile orgFile
-        output = file ++ ": " ++ "WAITING " ++ description
+        outputString = file ++ ": " ++ "WAITING " ++ description
     in case date of
-           Nothing -> pure output
+           Nothing -> pure outputString
            Just realDate -> do
                currentTime <- getCurrentTime
                let nOfDays =
                        (floor $
                         (/ nominalDay) $ diffUTCTime currentTime realDate) :: Int
-               pure $ output ++ ": " ++ show nOfDays ++ " days"
+               pure $ outputString ++ ": " ++ show nOfDays ++ " days"
 
 -- | One day in 'NominalDiffTime'.
 nominalDay :: NominalDiffTime
@@ -120,10 +129,11 @@ addSth [] _ = []
 addSth (x:xs) addition = (x, addition) : addSth xs addition
 
 docToHeading :: Document -> [Heading]
-docToHeading doc =
-    let topHeadings = documentHeadings doc :: [Heading]
-        addSubHeadings list x = list ++ [x] ++ subHeadings x
-    in foldl' addSubHeadings [] topHeadings
+docToHeading doc = getAllHeadings $ documentHeadings doc
+
+getAllHeadings :: [Heading] -> [Heading]
+getAllHeadings [] = []
+getAllHeadings (x:xs) = x : getAllHeadings (subHeadings x ++ xs)
 
 getDocument :: Text -> Either String Document
 getDocument content =

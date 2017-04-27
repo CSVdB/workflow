@@ -9,7 +9,6 @@ module Workflow.OptParse
     ) where
 
 import Data.Configurator
-import Data.Configurator.Types
 import Import hiding (lookup)
 import Options.Applicative
 import System.Environment
@@ -22,7 +21,7 @@ getInstructions = do
     pure (dispatch, getSettings flags)
 
 getSettings :: Flags -> Settings
-getSettings _ = Settings
+getSettings Flags {..} = Settings shouldPrint
 
 getDispatch :: Command -> Flags -> IO Dispatch
 getDispatch cmd flags = do
@@ -31,37 +30,36 @@ getDispatch cmd flags = do
 
 getDispatchFromConfig :: Command -> Configuration -> IO Dispatch
 getDispatchFromConfig CommandWaiting Configuration {..} = do
-    configPath <- parseAbsDir confDataDir
+    configPath <- parseAbsDir workPathConfig
     pure (DispatchWaiting configPath)
 
 getConfig :: Flags -> IO Configuration
-getConfig flags = do
-    configPath <- getWorkPath flags
-    pure Configuration {confDataDir = fromAbsDir configPath}
+getConfig Flags {..} = do
+    configPath <-
+        case confPath of
+            Nothing -> defaultConfigFile
+            Just path -> resolveFile' path
+    (dirPath, shouldPrintConfig) <- extractFromConfigPath configPath
+    workPathUsed <-
+        case workPath of
+            Nothing -> pure dirPath
+            Just directoryPath -> parseAbsDir directoryPath
+    pure $ Configuration (fromAbsDir workPathUsed) shouldPrintConfig
 
-getWorkPath :: Flags -> IO (Path Abs Dir)
-getWorkPath flags@Flags {..} =
-    case confPath of
-        Nothing -> do
-            configPath <- getConfigPath flags
-            getWorkPathFromConfigPath configPath
-        Just configPath -> parseAbsDir configPath
-
-getConfigPath :: Flags -> IO (Path Abs File)
-getConfigPath Flags {..} =
-    case workPath of
-        Nothing -> defaultConfigFile
-        Just path -> resolveFile' path
-
-getWorkPathFromConfigPath :: Path Abs File -> IO (Path Abs Dir)
-getWorkPathFromConfigPath confPath = do
-    config <- load [Optional $ toFilePath confPath] :: IO Config
-    configPath <- lookup config "path"
-    case configPath of
-        Nothing -> do
-            home <- getHomeDir
-            resolveDir home "workflow"
-        Just directoryPath -> parseAbsDir directoryPath
+extractFromConfigPath :: Path Abs File -> IO (Path Abs Dir, ShouldPrint)
+extractFromConfigPath confPath = do
+    config <- load [Optional $ toFilePath confPath]
+    dirPath <- lookup config "path"
+    workPath <-
+        case dirPath of
+            Nothing -> do
+                home <- getHomeDir
+                resolveDir home "workflow"
+            Just workPathFound -> parseAbsDir workPathFound
+    shouldPrintConfig <- lookup config "shouldPrint"
+    case shouldPrintConfig of
+        Nothing -> pure (workPath, defaultShouldPrint)
+        Just shouldPrint -> pure (workPath, shouldPrint)
 
 defaultConfigFile :: IO (Path Abs File)
 defaultConfigFile = do
@@ -123,4 +121,17 @@ parseFlags =
              , help "Give the path to the workflow directory to be used"
              , value Nothing
              , metavar "FILEPATH"
+             ]) <*>
+    option
+        (maybeReader getShouldPrint)
+        (mconcat
+             [ long "should_print"
+             , help
+                   "This describes whether error messages should be handled as errors (\"error\"), warnings (\"warning\") or ignored (\"nothing\")."
+             , showDefault
+             , value defaultShouldPrint
+             , metavar "SHOULDPRINT"
              ])
+
+defaultShouldPrint :: ShouldPrint
+defaultShouldPrint = Warning

@@ -12,8 +12,9 @@ spec =
     runIO $ do
         putStrLn ""
         workflowPath <- resolveDir' "../test_resources/workflow"
-        (waitingHeadings, errMess) <- getWaitingHeadings workflowPath Settings
-        output <- getOutput waitingHeadings
+        (waitingHeadings, errMess) <-
+            getWaitingHeadings workflowPath $ Settings Not
+        strings <- getOutput waitingHeadings
         -- assertEqual
         --     "There are 22 waiting-tasks in the example directory"
         --     (length waitingHeadings)
@@ -30,7 +31,7 @@ spec =
         -- getHeadings, addSth, docToHeading, getAllHeadings
         assertEqual
             "The first task which should be printed"
-            (head output)
+            (head strings)
             "acc.org: WAITING for the internet company to reply about the wrong invoice.: 29 days"
         -- Checks the exact printed version of one task.
         -- This tests getDate, toWaitingTask, getOutput etc.
