@@ -84,17 +84,13 @@ toString :: WaitingTask -> IO [String]
 toString WaitingTask {..} =
     let file = fromRelFile orgFile
     in case date of
-           Nothing -> pure [file ++ ":", "WAITING " ++ description, " "]
+           Nothing -> pure [file, "WAITING " ++ description, ""]
            Just realDate -> do
                currentTime <- getCurrentTime
                let nOfDays =
                        (floor $
                         (/ nominalDay) $ diffUTCTime currentTime realDate) :: Int
-               pure
-                   [ file ++ ":"
-                   , "WAITING " ++ description ++ ":"
-                   , show nOfDays ++ " days"
-                   ]
+               pure [file, "WAITING " ++ description, show nOfDays ++ " days"]
 
 -- | One day in 'NominalDiffTime'.
 nominalDay :: NominalDiffTime
