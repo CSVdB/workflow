@@ -64,7 +64,8 @@ test-suite workflow-test
         bytestring -any,
         attoparsec >=0.13,
         hspec -any,
-        HUnit >=1.5
+        HUnit >=1.5,
+        boxes >=0.1
     default-language: Haskell2010
     default-extensions: NoImplicitPrelude
     hs-source-dirs: test/

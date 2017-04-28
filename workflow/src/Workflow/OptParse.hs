@@ -21,7 +21,7 @@ getInstructions = do
     pure (dispatch, getSettings flags)
 
 getSettings :: Flags -> Settings
-getSettings Flags {..} = Settings shouldPrint
+getSettings Flags {..} = Settings shouldprint
 
 getDispatch :: Command -> Flags -> IO Dispatch
 getDispatch cmd flags = do
@@ -30,36 +30,36 @@ getDispatch cmd flags = do
 
 getDispatchFromConfig :: Command -> Configuration -> IO Dispatch
 getDispatchFromConfig CommandWaiting Configuration {..} = do
-    configPath <- parseAbsDir workPathConfig
+    configPath <- parseAbsDir workDirConfig
     pure (DispatchWaiting configPath)
 
 getConfig :: Flags -> IO Configuration
 getConfig Flags {..} = do
     configPath <-
-        case confPath of
+        case configfile of
             Nothing -> defaultConfigFile
             Just path -> resolveFile' path
     (dirPath, shouldPrintConfig) <- extractFromConfigPath configPath
-    workPathUsed <-
-        case workPath of
+    workDirUsed <-
+        case workflowdir of
             Nothing -> pure dirPath
             Just directoryPath -> parseAbsDir directoryPath
-    pure $ Configuration (fromAbsDir workPathUsed) shouldPrintConfig
+    pure $ Configuration (fromAbsDir workDirUsed) shouldPrintConfig
 
 extractFromConfigPath :: Path Abs File -> IO (Path Abs Dir, ShouldPrint)
 extractFromConfigPath confPath = do
     config <- load [Optional $ toFilePath confPath]
     dirPath <- lookup config "path"
-    workPath <-
+    workDir <-
         case dirPath of
             Nothing -> do
                 home <- getHomeDir
                 resolveDir home "workflow"
-            Just workPathFound -> parseAbsDir workPathFound
+            Just workDirFound -> parseAbsDir workDirFound
     shouldPrintConfig <- lookup config "shouldPrint"
     case shouldPrintConfig of
-        Nothing -> pure (workPath, defaultShouldPrint)
-        Just shouldPrint -> pure (workPath, shouldPrint)
+        Nothing -> pure (workDir, defaultShouldPrint)
+        Just shouldPrint -> pure (workDir, shouldPrint)
 
 defaultConfigFile :: IO (Path Abs File)
 defaultConfigFile = do

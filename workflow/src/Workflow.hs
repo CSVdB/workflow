@@ -37,39 +37,40 @@ waiting workflowPath settings@Settings {..} = do
 
 output :: [(Heading, Path Rel File)] -> IO ()
 output waitingHeadings = do
-    result <- getOutput waitingHeadings
-    boxFormat result
+    currentTime <- getCurrentTime
+    putStrLn $ boxFormat $ getOutput currentTime waitingHeadings
 
-boxFormat :: [[String]] -> IO ()
+boxFormat :: [[String]] -> String
 boxFormat list =
-    let boxes = fmap text <$> transpose list
+    let boxes = transpose $ fmap text <$> list
         table = hsep 1 center1 $ fmap (vcat left) boxes
-    in printBox table
+    in render table
 
 getWaitingHeadings :: Path Abs Dir
                    -> Settings
                    -> IO ([(Heading, Path Rel File)], String)
 getWaitingHeadings workflowPath _ = do
     files <- filesIO workflowPath
-    textList <- mapM getContent files -- textList :: [(Text, Path Rel File)]
+    textList <- mapM getContent files
     let (errorMessages, listHeadings) =
             partitionEithers $ fmap getHeadings textList
     let headings = concat listHeadings
     let errMess = concat errorMessages
     pure (filter (isWaiting . fst) headings, errMess)
 
-getOutput :: [(Heading, Path Rel File)] -> IO [[String]]
-getOutput waitingHeadings =
+getOutput :: UTCTime -> [(Heading, Path Rel File)] -> [[String]]
+getOutput currentTime waitingHeadings =
     let tasks =
             reverse $
             sortOn date $ catMaybes $ fmap toWaitingTask waitingHeadings
-    in mapM toString tasks
+    in fmap (toString currentTime) tasks
 
 filesIO :: Path Abs Dir -> IO [Path Abs File]
 filesIO workPath = do
     (_, files) <- listDirRecur workPath
     let endsInOrg file = ".org" == fileExtension file
-    pure $ filter endsInOrg files
+    let doesntBeginWithDot file = '.' /= (head . fromAbsFile) file
+    pure $ filter doesntBeginWithDot $ filter endsInOrg files
 
 getContent :: Path Abs File -> IO (Text, Path Rel File)
 getContent filePath = do
@@ -80,17 +81,16 @@ isWaiting :: Heading -> Bool
 isWaiting Heading {..} =
     keyword == Just StateKeyword {unStateKeyword = "WAITING"}
 
-toString :: WaitingTask -> IO [String]
-toString WaitingTask {..} =
+toString :: UTCTime -> WaitingTask -> [String]
+toString currentTime WaitingTask {..} =
     let file = fromRelFile orgFile
     in case date of
-           Nothing -> pure [file, "WAITING " ++ description, ""]
-           Just realDate -> do
-               currentTime <- getCurrentTime
+           Nothing -> [file, "WAITING " ++ description, ""]
+           Just realDate ->
                let nOfDays =
                        (floor $
                         (/ nominalDay) $ diffUTCTime currentTime realDate) :: Int
-               pure [file, "WAITING " ++ description, show nOfDays ++ " days"]
+               in [file, "WAITING " ++ description, show nOfDays ++ " days"]
 
 -- | One day in 'NominalDiffTime'.
 nominalDay :: NominalDiffTime
