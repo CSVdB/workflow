@@ -1,0 +1,2 @@
+path = "test_resources/workflow"
+shouldPrint = "warning"

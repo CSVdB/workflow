@@ -61,15 +61,10 @@ formatDirPath Nothing = do
     home <- getHomeDir
     resolveDir home "workflow"
 formatDirPath (Just dirPathString) =
-    case head dirPathString of
-        '~' -> do
+    case dirPathString of
+        '~':_ -> do
             home <- getHomeDir
             dirPath <- resolveDir home $ drop 2 dirPathString
-            print dirPath
-            pure dirPath
-        '/' -> do
-            home <- getHomeDir
-            dirPath <- resolveDir home $ tail dirPathString
             print dirPath
             pure dirPath
         _ -> do
@@ -77,9 +72,7 @@ formatDirPath (Just dirPathString) =
             resolveDir currentDir dirPathString
 
 defaultConfigFile :: IO (Path Abs File)
-defaultConfigFile = do
-    home <- getHomeDir
-    resolveFile home ".wfrc"
+defaultConfigFile = resolveFile' "test_resources/.wfrc"
 
 getArguments :: IO Arguments
 getArguments = do

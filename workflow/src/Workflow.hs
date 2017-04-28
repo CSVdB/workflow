@@ -14,6 +14,7 @@ import Data.Time.Clock
 import Data.Time.Format
 import Data.Tuple
 import Import
+import System.FilePath.Posix
 import Text.PrettyPrint.Boxes
 import Workflow.OptParse
 
@@ -69,8 +70,14 @@ filesIO :: Path Abs Dir -> IO [Path Abs File]
 filesIO workPath = do
     (_, files) <- listDirRecur workPath
     let endsInOrg file = ".org" == fileExtension file
-    let doesntBeginWithDot file = '.' /= (head . fromRelFile . filename) file
-    pure $ filter doesntBeginWithDot $ filter endsInOrg files
+    pure $ filter (not . isHidden) $ filter endsInOrg files
+
+isHidden :: Path Abs File -> Bool
+isHidden = any startsWithDot . splitDirectories . fromAbsFile
+
+startsWithDot :: FilePath -> Bool
+startsWithDot ('.':_) = True
+startsWithDot _ = False
 
 getContent :: Path Abs File -> IO (Text, Path Rel File)
 getContent filePath = do

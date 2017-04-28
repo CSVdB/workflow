@@ -22,9 +22,8 @@ findWaitingHeadings = do
     workflowPath <- findWorkflowPath
     fmap fst $ getWaitingHeadings workflowPath $ Settings Not
 
-findString :: UTCTime -> IO String
-findString time = do
-    workflowPath <- findWorkflowPath
+findString :: UTCTime -> Path Abs Dir -> IO String
+findString time workflowPath = do
     (waitingHeadings, _) <- getWaitingHeadings workflowPath $ Settings Not
     let result = getOutput time waitingHeadings
     pure $ boxFormat result
@@ -57,8 +56,19 @@ spec =
                 let day = fromGregorian 2017 04 27
                 let seconds = 1
                 let time = UTCTime day seconds
-                strings <- findString time
+                workflowPath <- findWorkflowPath
+                strings <- findString time workflowPath
                 assertEqual
                     "The first task which should be printed"
                     (head $ lines strings)
                     "acc.org              WAITING for the internet company to reply about the wrong invoice.             28 days"
+        describe "hiddenFiles" $
+            it "knows to ignore hidden files" $ do
+                dirPath <- resolveDir' "../test_resources/hiddenFiles/"
+                createDirIfMissing True dirPath
+                hiddenFile <- resolveFile dirPath ".iAmHidden.org"
+                writeFile
+                    (fromAbsFile hiddenFile)
+                    "* WAITING THIS SHOULD NOT APPEAR"
+                waitingHeadings <- getWaitingHeadings dirPath (Settings Not)
+                fst waitingHeadings `shouldBe` []
