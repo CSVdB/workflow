@@ -21,7 +21,7 @@ getInstructions = do
     pure (dispatch, getSettings flags)
 
 getSettings :: Flags -> Settings
-getSettings Flags {..} = Settings shouldprint
+getSettings Flags {..} = Settings shouldPrint
 
 getDispatch :: Command -> Flags -> IO Dispatch
 getDispatch cmd flags = do
@@ -36,12 +36,12 @@ getDispatchFromConfig CommandWaiting Configuration {..} = do
 getConfig :: Flags -> IO Configuration
 getConfig Flags {..} = do
     configPath <-
-        case configfile of
+        case configFile of
             Nothing -> defaultConfigFile
             Just path -> resolveFile' path
     (dirPath, shouldPrintConfig) <- extractFromConfigPath configPath
     workDirUsed <-
-        case workflowdir of
+        case workflowDir of
             Nothing -> pure dirPath
             Just directoryPath -> parseAbsDir directoryPath
     pure $ Configuration (fromAbsDir workDirUsed) shouldPrintConfig
@@ -49,17 +49,32 @@ getConfig Flags {..} = do
 extractFromConfigPath :: Path Abs File -> IO (Path Abs Dir, ShouldPrint)
 extractFromConfigPath confPath = do
     config <- load [Optional $ toFilePath confPath]
-    dirPath <- lookup config "path"
-    workDir <-
-        case dirPath of
-            Nothing -> do
-                home <- getHomeDir
-                resolveDir home "workflow"
-            Just workDirFound -> parseAbsDir workDirFound
+    dirPathString <- lookup config "path"
+    workDir <- formatDirPath dirPathString
     shouldPrintConfig <- lookup config "shouldPrint"
     case shouldPrintConfig of
         Nothing -> pure (workDir, defaultShouldPrint)
         Just shouldPrint -> pure (workDir, shouldPrint)
+
+formatDirPath :: Maybe String -> IO (Path Abs Dir)
+formatDirPath Nothing = do
+    home <- getHomeDir
+    resolveDir home "workflow"
+formatDirPath (Just dirPathString) =
+    case head dirPathString of
+        '~' -> do
+            home <- getHomeDir
+            dirPath <- resolveDir home $ drop 2 dirPathString
+            print dirPath
+            pure dirPath
+        '/' -> do
+            home <- getHomeDir
+            dirPath <- resolveDir home $ tail dirPathString
+            print dirPath
+            pure dirPath
+        _ -> do
+            currentDir <- getCurrentDir
+            resolveDir currentDir dirPathString
 
 defaultConfigFile :: IO (Path Abs File)
 defaultConfigFile = do
@@ -109,7 +124,7 @@ parseFlags =
     option
         (Just <$> str)
         (mconcat
-             [ long "filePath"
+             [ long "configg-file"
              , help "Give the path to an altenative config file"
              , value Nothing
              , metavar "FILEPATH"
@@ -117,7 +132,7 @@ parseFlags =
     option
         (Just <$> str)
         (mconcat
-             [ long "config_path"
+             [ long "workflow-dir"
              , help "Give the path to the workflow directory to be used"
              , value Nothing
              , metavar "FILEPATH"
@@ -125,12 +140,12 @@ parseFlags =
     option
         (maybeReader getShouldPrint)
         (mconcat
-             [ long "should_print"
+             [ long "should-print"
              , help
                    "This describes whether error messages should be handled as errors (\"error\"), warnings (\"warning\") or ignored (\"nothing\")."
              , showDefault
              , value defaultShouldPrint
-             , metavar "SHOULDPRINT"
+             , metavar "shouldPrint"
              ])
 
 defaultShouldPrint :: ShouldPrint

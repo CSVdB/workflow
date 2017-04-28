@@ -1,6 +1,7 @@
 module WorkflowSpec where
 
 import Data.OrgMode.Parse
+import Data.Time.Calendar
 import Data.Time.Clock
 import Import
 import Test.HUnit.Base hiding (Path)
@@ -21,12 +22,11 @@ findWaitingHeadings = do
     workflowPath <- findWorkflowPath
     fmap fst $ getWaitingHeadings workflowPath $ Settings Not
 
-findString :: IO String
-findString = do
+findString :: UTCTime -> IO String
+findString time = do
     workflowPath <- findWorkflowPath
     (waitingHeadings, _) <- getWaitingHeadings workflowPath $ Settings Not
-    currentTime <- getCurrentTime
-    let result = getOutput currentTime waitingHeadings
+    let result = getOutput time waitingHeadings
     pure $ boxFormat result
 
 spec :: Spec
@@ -54,8 +54,11 @@ spec =
                 "2017-01-27 Thu 18:47"
         describe "formatting" $
             it "formats the output correctly" $ do
-                strings <- findString
+                let day = fromGregorian 2017 04 27
+                let seconds = 1
+                let time = UTCTime day seconds
+                strings <- findString time
                 assertEqual
                     "The first task which should be printed"
                     (head $ lines strings)
-                    "acc.org              WAITING for the internet company to reply about the wrong invoice.             29 days"
+                    "acc.org              WAITING for the internet company to reply about the wrong invoice.             28 days"

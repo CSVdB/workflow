@@ -32,9 +32,9 @@ instance Configured ShouldPrint where
     convert _ = Nothing
 
 data Flags = Flags
-    { workflowdir :: Maybe FilePath
-    , configfile :: Maybe FilePath
-    , shouldprint :: ShouldPrint
+    { workflowDir :: Maybe FilePath
+    , configFile :: Maybe FilePath
+    , shouldPrint :: ShouldPrint
     } deriving (Show, Eq)
 
 data Configuration = Configuration

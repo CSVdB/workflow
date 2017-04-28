@@ -69,7 +69,7 @@ filesIO :: Path Abs Dir -> IO [Path Abs File]
 filesIO workPath = do
     (_, files) <- listDirRecur workPath
     let endsInOrg file = ".org" == fileExtension file
-    let doesntBeginWithDot file = '.' /= (head . fromAbsFile) file
+    let doesntBeginWithDot file = '.' /= (head . fromRelFile . filename) file
     pure $ filter doesntBeginWithDot $ filter endsInOrg files
 
 getContent :: Path Abs File -> IO (Text, Path Rel File)
