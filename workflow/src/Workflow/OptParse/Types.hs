@@ -8,14 +8,6 @@ import Data.Configurator.Types
 import qualified Data.Text as T
 import Introduction
 
-type Arguments = (Command, Flags)
-
-type Instructions = (Dispatch, Settings)
-
-data Command =
-    CommandWaiting
-    deriving (Show, Eq)
-
 data ShouldPrint
     = Error
     | Warning
@@ -31,21 +23,33 @@ instance Configured ShouldPrint where
     convert (String string) = getShouldPrint $ T.unpack string
     convert _ = Nothing
 
-data Flags = Flags
-    { workflowDir :: Maybe FilePath
+type Arguments = (Command, Flags)
+
+type Instructions = (Dispatch, Settings)
+
+data Command = CommandWaiting
+    { workDirCommand :: Maybe FilePath
     , configFile :: Maybe FilePath
     , shouldPrint :: ShouldPrint
     } deriving (Show, Eq)
+
+data Flags =
+    Flags
+    deriving (Show, Eq)
 
 data Configuration = Configuration
     { workDirConfig :: FilePath
     , shouldPrintConfig :: ShouldPrint
     } deriving (Show, Eq)
 
-newtype Settings = Settings
-    { shouldPrintSettings :: ShouldPrint
-    } deriving (Show, Eq)
-
-newtype Dispatch =
-    DispatchWaiting (Path Abs Dir)
+data Settings =
+    Settings
     deriving (Show, Eq)
+
+defaultShouldPrint :: ShouldPrint
+defaultShouldPrint = Warning
+
+data Dispatch = DispatchWaiting
+    { workDir :: Path Abs Dir
+    , shouldPrintDispatch :: ShouldPrint
+    } deriving (Show, Eq)

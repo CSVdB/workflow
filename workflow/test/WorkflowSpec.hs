@@ -1,74 +1,52 @@
 module WorkflowSpec where
 
-import Data.OrgMode.Parse
 import Data.Time.Calendar
 import Data.Time.Clock
 import Import
-import Test.HUnit.Base hiding (Path)
 import Test.Hspec
-import Workflow
 import Workflow.OptParse
+import Workflow.Waiting
 
-findWorkflowPath :: IO (Path Abs Dir)
-findWorkflowPath = resolveDir' "../test_resources/workflow"
-
-findErrMess :: IO String
-findErrMess = do
-    workflowPath <- findWorkflowPath
-    fmap snd $ getWaitingHeadings workflowPath $ Settings Not
-
-findWaitingHeadings :: IO [(Heading, Path Rel File)]
-findWaitingHeadings = do
-    workflowPath <- findWorkflowPath
-    fmap fst $ getWaitingHeadings workflowPath $ Settings Not
-
-findString :: UTCTime -> Path Abs Dir -> IO String
-findString time workflowPath = do
-    (waitingHeadings, _) <- getWaitingHeadings workflowPath $ Settings Not
-    let result = getOutput time waitingHeadings
-    pure $ boxFormat result
+findWorkDir :: IO (Path Abs Dir)
+findWorkDir = resolveDir' "../test_resources/workflow"
 
 spec :: Spec
 spec =
     parallel $ do
         describe "waitingTasks" $
             it "finds all waiting tasks" $ do
-                waitingHeadings <- findWaitingHeadings
-                assertEqual
-                    "There are 22 waiting-tasks in the example directory"
-                    (length waitingHeadings)
-                    22
+                workflowPath <- findWorkDir
+                (waitingHeadings, _) <- getWaitingHeadings workflowPath Settings
+                length waitingHeadings `shouldBe` 1
         describe "errorMessages" $
             it "generates no error messages" $ do
-                errMess <- findErrMess
-                assertEqual "There are error messages!" errMess ""
+                workflowPath <- findWorkDir
+                (_, errMess) <- getWaitingHeadings workflowPath Settings
+                errMess `shouldBe` []
         describe "testGetDate" $
             it "parses the date and time" $
-            assertEqual
-                "Testing the function \"between\""
-                (between
-                     (/= '[')
-                     (/= ']')
-                     "- State \"WAITING\"    from \"TODO\"       [2017-01-27 Thu 18:47]")
-                "2017-01-27 Thu 18:47"
+            between
+                (/= '[')
+                (/= ']')
+                "- State \"WAITING\"    from \"TODO\"       [2017-01-27 Thu 18:47]" `shouldBe`
+            "2017-01-27 Thu 18:47"
         describe "formatting" $
             it "formats the output correctly" $ do
                 let day = fromGregorian 2017 04 27
                 let seconds = 1
                 let time = UTCTime day seconds
-                workflowPath <- findWorkflowPath
-                strings <- findString time workflowPath
-                assertEqual
-                    "The first task which should be printed"
-                    (head $ lines strings)
-                    "acc.org              WAITING for the internet company to reply about the wrong invoice.             28 days"
+                workflowPath <- findWorkDir
+                (waitingHeadings, _) <- getWaitingHeadings workflowPath Settings
+                let strings = headingsToString time waitingHeadings
+                last (lines strings) `shouldBe`
+                    "projects/test.org WAITING a waiting task 33 days"
         describe "hiddenFiles" $
             it "knows to ignore hidden files" $ do
                 dirPath <- resolveDir' "../test_resources/hiddenFiles/"
-                createDirIfMissing True dirPath
+                ensureDir dirPath
                 hiddenFile <- resolveFile dirPath ".iAmHidden.org"
                 writeFile
                     (fromAbsFile hiddenFile)
                     "* WAITING THIS SHOULD NOT APPEAR"
-                waitingHeadings <- getWaitingHeadings dirPath (Settings Not)
+                waitingHeadings <- getWaitingHeadings dirPath Settings
                 fst waitingHeadings `shouldBe` []

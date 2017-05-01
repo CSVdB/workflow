@@ -21,40 +21,45 @@ getInstructions = do
     pure (dispatch, getSettings flags)
 
 getSettings :: Flags -> Settings
-getSettings Flags {..} = Settings shouldPrint
+getSettings _ = Settings
 
 getDispatch :: Command -> Flags -> IO Dispatch
 getDispatch cmd flags = do
-    config <- getConfig flags
+    config <- getConfig cmd flags
     getDispatchFromConfig cmd config
 
 getDispatchFromConfig :: Command -> Configuration -> IO Dispatch
-getDispatchFromConfig CommandWaiting Configuration {..} = do
+getDispatchFromConfig CommandWaiting {..} Configuration {..} = do
     configPath <- parseAbsDir workDirConfig
-    pure (DispatchWaiting configPath)
+    pure $ DispatchWaiting configPath shouldPrintConfig
 
-getConfig :: Flags -> IO Configuration
-getConfig Flags {..} = do
+getConfig :: Command -> Flags -> IO Configuration
+getConfig CommandWaiting {..} _ = do
     configPath <-
         case configFile of
             Nothing -> defaultConfigFile
             Just path -> resolveFile' path
-    (dirPath, shouldPrintConfig) <- extractFromConfigPath configPath
+    dirPath <- getDirPathFromConfigPath configPath
+    shouldPrintConfig <- getShouldPrintPathFromConfigPath configPath
     workDirUsed <-
-        case workflowDir of
+        case workDirCommand of
             Nothing -> pure dirPath
             Just directoryPath -> parseAbsDir directoryPath
     pure $ Configuration (fromAbsDir workDirUsed) shouldPrintConfig
 
-extractFromConfigPath :: Path Abs File -> IO (Path Abs Dir, ShouldPrint)
-extractFromConfigPath confPath = do
+getDirPathFromConfigPath :: Path Abs File -> IO (Path Abs Dir)
+getDirPathFromConfigPath confPath = do
     config <- load [Optional $ toFilePath confPath]
     dirPathString <- lookup config "path"
-    workDir <- formatDirPath dirPathString
+    formatDirPath dirPathString
+
+getShouldPrintPathFromConfigPath :: Path Abs File -> IO ShouldPrint
+getShouldPrintPathFromConfigPath confPath = do
+    config <- load [Optional $ toFilePath confPath]
     shouldPrintConfig <- lookup config "shouldPrint"
     case shouldPrintConfig of
-        Nothing -> pure (workDir, defaultShouldPrint)
-        Just shouldPrint -> pure (workDir, shouldPrint)
+        Nothing -> pure defaultShouldPrint
+        Just shouldPrint -> pure shouldPrint
 
 formatDirPath :: Maybe String -> IO (Path Abs Dir)
 formatDirPath Nothing = do
@@ -72,7 +77,9 @@ formatDirPath (Just dirPathString) =
             resolveDir currentDir dirPathString
 
 defaultConfigFile :: IO (Path Abs File)
-defaultConfigFile = resolveFile' "test_resources/.wfrc"
+defaultConfigFile = do
+    homeDir <- getHomeDir
+    resolveFile homeDir ".wfrc"
 
 getArguments :: IO Arguments
 getArguments = do
@@ -108,38 +115,35 @@ parseCommand = hsubparser $ mconcat [command "waiting" parseCommandWaiting]
 parseCommandWaiting :: ParserInfo Command
 parseCommandWaiting = info parser modifier
   where
-    parser = pure CommandWaiting
     modifier = fullDesc <> progDesc "Print a list of the \"waiting\" tasks"
+    parser =
+        CommandWaiting <$>
+        option
+            (Just <$> str)
+            (mconcat
+                 [ long "config-file"
+                 , help "Give the path to an altenative config file"
+                 , value Nothing
+                 , metavar "FILEPATH"
+                 ]) <*>
+        option
+            (Just <$> str)
+            (mconcat
+                 [ long "workflow-dir"
+                 , help "Give the path to the workflow directory to be used"
+                 , value Nothing
+                 , metavar "FILEPATH"
+                 ]) <*>
+        option
+            (maybeReader getShouldPrint)
+            (mconcat
+                 [ long "should-print"
+                 , help
+                       "This describes whether error messages should be handled as errors (\"error\"), warnings (\"warning\") or ignored (\"nothing\")."
+                 , showDefault
+                 , value defaultShouldPrint
+                 , metavar "shouldPrint"
+                 ])
 
 parseFlags :: Parser Flags
-parseFlags =
-    Flags <$>
-    option
-        (Just <$> str)
-        (mconcat
-             [ long "configg-file"
-             , help "Give the path to an altenative config file"
-             , value Nothing
-             , metavar "FILEPATH"
-             ]) <*>
-    option
-        (Just <$> str)
-        (mconcat
-             [ long "workflow-dir"
-             , help "Give the path to the workflow directory to be used"
-             , value Nothing
-             , metavar "FILEPATH"
-             ]) <*>
-    option
-        (maybeReader getShouldPrint)
-        (mconcat
-             [ long "should-print"
-             , help
-                   "This describes whether error messages should be handled as errors (\"error\"), warnings (\"warning\") or ignored (\"nothing\")."
-             , showDefault
-             , value defaultShouldPrint
-             , metavar "shouldPrint"
-             ])
-
-defaultShouldPrint :: ShouldPrint
-defaultShouldPrint = Warning
+parseFlags = pure Flags
