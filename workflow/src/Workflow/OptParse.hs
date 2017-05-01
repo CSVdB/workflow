@@ -32,9 +32,14 @@ getDispatchFromConfig :: Command -> Configuration -> IO Dispatch
 getDispatchFromConfig CommandWaiting {..} Configuration {..} = do
     configPath <- parseAbsDir workDirConfig
     pure $ DispatchWaiting configPath shouldPrintConfig
+getDispatchFromConfig CommandNext {..} Configuration {..} = do
+    configPath <- parseAbsDir workDirConfig
+    pure $ DispatchNext configPath shouldPrintConfig
 
 getConfig :: Command -> Flags -> IO Configuration
 getConfig CommandWaiting {..} _ =
+    getConfigFromInput workDirCommand configFile shouldPrint
+getConfig CommandNext {..} _ =
     getConfigFromInput workDirCommand configFile shouldPrint
 
 getConfigFromInput :: Maybe FilePath

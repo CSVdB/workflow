@@ -30,6 +30,10 @@ type Instructions = (Dispatch, Settings)
 data Command = CommandWaiting
     { workDirCommand :: Maybe FilePath
     , configFile :: Maybe FilePath
+    , shouldPrint :: ShouldPrint }
+    | CommandNext
+    { workDirCommand :: Maybe FilePath
+    , configFile :: Maybe FilePath
     , shouldPrint :: ShouldPrint
     } deriving (Show, Eq)
 
@@ -50,6 +54,9 @@ defaultShouldPrint :: ShouldPrint
 defaultShouldPrint = Warning
 
 data Dispatch = DispatchWaiting
+    { workDir :: Path Abs Dir
+    , shouldPrintDispatch :: ShouldPrint }
+    | DispatchNext
     { workDir :: Path Abs Dir
     , shouldPrintDispatch :: ShouldPrint
     } deriving (Show, Eq)

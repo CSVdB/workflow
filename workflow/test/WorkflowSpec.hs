@@ -6,6 +6,7 @@ import Import
 import Test.Hspec
 import Workflow.OptParse
 import Workflow.Waiting
+import Workflow.Next
 
 findWorkDir :: IO (Path Abs Dir)
 findWorkDir = resolveDir' "../test_resources/workflow"
