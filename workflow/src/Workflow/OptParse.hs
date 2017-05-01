@@ -34,18 +34,25 @@ getDispatchFromConfig CommandWaiting {..} Configuration {..} = do
     pure $ DispatchWaiting configPath shouldPrintConfig
 
 getConfig :: Command -> Flags -> IO Configuration
-getConfig CommandWaiting {..} _ = do
+getConfig CommandWaiting {..} _ =
+    getConfigFromInput workDirCommand configFile shouldPrint
+
+getConfigFromInput :: Maybe FilePath
+                   -> Maybe FilePath
+                   -> ShouldPrint
+                   -> IO Configuration
+getConfigFromInput workDir configFile _ = do
     configPath <-
         case configFile of
             Nothing -> defaultConfigFile
             Just path -> resolveFile' path
     dirPath <- getDirPathFromConfigPath configPath
     shouldPrintConfig <- getShouldPrintPathFromConfigPath configPath
-    workDirUsed <-
-        case workDirCommand of
+    workDirConfig <-
+        case workDir of
             Nothing -> pure dirPath
             Just directoryPath -> parseAbsDir directoryPath
-    pure $ Configuration (fromAbsDir workDirUsed) shouldPrintConfig
+    pure $ Configuration (fromAbsDir workDirConfig) shouldPrintConfig
 
 getDirPathFromConfigPath :: Path Abs File -> IO (Path Abs Dir)
 getDirPathFromConfigPath confPath = do
