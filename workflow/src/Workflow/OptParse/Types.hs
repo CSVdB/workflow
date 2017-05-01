@@ -27,15 +27,14 @@ type Arguments = (Command, Flags)
 
 type Instructions = (Dispatch, Settings)
 
-data Command = CommandWaiting
-    { workDirCommand :: Maybe FilePath
-    , configFile :: Maybe FilePath
-    , shouldPrint :: ShouldPrint }
-    | CommandNext
-    { workDirCommand :: Maybe FilePath
-    , configFile :: Maybe FilePath
-    , shouldPrint :: ShouldPrint
-    } deriving (Show, Eq)
+data Command
+    = CommandWaiting { workDirCommand :: Maybe FilePath
+                    ,  configFile :: Maybe FilePath
+                    ,  shouldPrint :: ShouldPrint}
+    | CommandNext { workDirCommand :: Maybe FilePath
+                 ,  configFile :: Maybe FilePath
+                 ,  shouldPrint :: ShouldPrint}
+    deriving (Show, Eq)
 
 data Flags =
     Flags
@@ -53,10 +52,9 @@ data Settings =
 defaultShouldPrint :: ShouldPrint
 defaultShouldPrint = Warning
 
-data Dispatch = DispatchWaiting
-    { workDir :: Path Abs Dir
-    , shouldPrintDispatch :: ShouldPrint }
-    | DispatchNext
-    { workDir :: Path Abs Dir
-    , shouldPrintDispatch :: ShouldPrint
-    } deriving (Show, Eq)
+data Dispatch
+    = DispatchWaiting { workDir :: Path Abs Dir
+                     ,  shouldPrintDispatch :: ShouldPrint}
+    | DispatchNext { workDir :: Path Abs Dir
+                  ,  shouldPrintDispatch :: ShouldPrint}
+    deriving (Show, Eq)

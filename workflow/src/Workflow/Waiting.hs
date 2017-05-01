@@ -31,8 +31,7 @@ waiting workDir shouldPrint settings = do
 printHeadings :: [(Heading, Path Rel File)] -> IO ()
 printHeadings waitingHeadings = do
     currentTime <- getCurrentTime
-    let currentTimeInTimezone = addUTCTime nominalHour currentTime
-    putStrLn $ headingsToString currentTimeInTimezone waitingHeadings
+    putStrLn $ headingsToString currentTime waitingHeadings
 
 formatString :: [[String]] -> String
 formatString list =
@@ -88,9 +87,11 @@ waitingTaskToStrings currentTime WaitingTask {..} =
     in case date of
            Nothing -> [file, "WAITING " ++ description, ""]
            Just realDate ->
-               let nOfDays =
+               let realDateInUTCTime = addUTCTime (-1 * nominalHour) realDate
+               -- timezone = UTC+01:00
+                   nOfDays =
                        (floor $
-                        diffUTCTime currentTime realDate / nominalDay) :: Int
+                        diffUTCTime currentTime realDateInUTCTime / nominalDay) :: Int
                in [file, "WAITING " ++ description, show nOfDays ++ " days"]
 
 -- | One day in 'NominalDiffTime'.

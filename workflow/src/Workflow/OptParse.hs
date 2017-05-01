@@ -122,40 +122,53 @@ parseArgs :: Parser Arguments
 parseArgs = (,) <$> parseCommand <*> parseFlags
 
 parseCommand :: Parser Command
-parseCommand = hsubparser $ mconcat [command "waiting" parseCommandWaiting]
+parseCommand =
+    hsubparser $
+    mconcat
+        [command "waiting" parseCommandWaiting, command "next" parseCommandNext]
 
 parseCommandWaiting :: ParserInfo Command
-parseCommandWaiting = info parser modifier
+parseCommandWaiting = info commandParser modifier
   where
     modifier = fullDesc <> progDesc "Print a list of the \"waiting\" tasks"
-    parser =
-        CommandWaiting <$>
-        option
-            (Just <$> str)
-            (mconcat
-                 [ long "config-file"
-                 , help "Give the path to an altenative config file"
-                 , value Nothing
-                 , metavar "FILEPATH"
-                 ]) <*>
-        option
-            (Just <$> str)
-            (mconcat
-                 [ long "workflow-dir"
-                 , help "Give the path to the workflow directory to be used"
-                 , value Nothing
-                 , metavar "FILEPATH"
-                 ]) <*>
-        option
-            (maybeReader getShouldPrint)
-            (mconcat
-                 [ long "should-print"
-                 , help
-                       "This describes whether error messages should be handled as errors (\"error\"), warnings (\"warning\") or ignored (\"nothing\")."
-                 , showDefault
-                 , value defaultShouldPrint
-                 , metavar "shouldPrint"
-                 ])
+
+parseCommandNext :: ParserInfo Command
+parseCommandNext = info commandParser modifier
+  where
+    modifier =
+        fullDesc <>
+        progDesc
+            "Print the list of \"next\" tasks as well as the files which don't have a \"next\" action"
+
+commandParser :: Parser Command
+commandParser =
+    CommandWaiting <$>
+    option
+        (Just <$> str)
+        (mconcat
+             [ long "config-file"
+             , help "Give the path to an altenative config file"
+             , value Nothing
+             , metavar "FILEPATH"
+             ]) <*>
+    option
+        (Just <$> str)
+        (mconcat
+             [ long "workflow-dir"
+             , help "Give the path to the workflow directory to be used"
+             , value Nothing
+             , metavar "FILEPATH"
+             ]) <*>
+    option
+        (maybeReader getShouldPrint)
+        (mconcat
+             [ long "should-print"
+             , help
+                   "This describes whether error messages should be handled as errors (\"error\"), warnings (\"warning\") or ignored (\"nothing\")."
+             , showDefault
+             , value defaultShouldPrint
+             , metavar "shouldPrint"
+             ])
 
 parseFlags :: Parser Flags
 parseFlags = pure Flags

@@ -6,7 +6,6 @@ import Import
 import Test.Hspec
 import Workflow.OptParse
 import Workflow.Waiting
-import Workflow.Next
 
 findWorkDir :: IO (Path Abs Dir)
 findWorkDir = resolveDir' "../test_resources/workflow"
@@ -51,3 +50,19 @@ spec =
                     "* WAITING THIS SHOULD NOT APPEAR"
                 waitingHeadings <- getWaitingHeadings dirPath Settings
                 fst waitingHeadings `shouldBe` []
+        describe "timezones" $
+            it "doesn't have a problem with timezones" $ do
+                let zeroDate =
+                        UTCTime (ModifiedJulianDay 0) (secondsToDiffTime 0)
+                let date1 = UTCTime (ModifiedJulianDay 0) (secondsToDiffTime 1)
+                orgFile1 <- parseRelFile "projects/test.org"
+                let emptyDescription = ""
+                let waitingTask1 =
+                        WaitingTask (Just date1) orgFile1 emptyDescription
+                let string1 = waitingTaskToStrings zeroDate waitingTask1
+                let date2 = addUTCTime nominalHour date1
+                let waitingTask2 =
+                        WaitingTask (Just date2) orgFile1 emptyDescription
+                let string2 = waitingTaskToStrings zeroDate waitingTask2
+                last string1 `shouldNotBe` last string2
+                -- This checks whether the hour for the timezone was actually added
