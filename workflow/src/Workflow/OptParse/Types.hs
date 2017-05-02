@@ -1,25 +1,60 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module Workflow.OptParse.Types where
 
+import Data.Configurator.Types
+import qualified Data.Text as T
 import Introduction
 
+data ShouldPrint
+    = Error
+    | Warning
+    | Not
+    deriving (Show, Eq)
+
+getShouldPrint :: String -> Maybe ShouldPrint
+getShouldPrint "error" = Just Error
+getShouldPrint "nothing" = Just Not
+getShouldPrint _ = Nothing
+
+instance Configured ShouldPrint where
+    convert (String string) = getShouldPrint $ T.unpack string
+    convert _ = Nothing
+
 type Arguments = (Command, Flags)
+
 type Instructions = (Dispatch, Settings)
+
 data Command
-    = Command
+    = CommandWaiting { workDirCommand :: Maybe FilePath
+                    ,  configFile :: Maybe FilePath
+                    ,  shouldPrint :: ShouldPrint}
+    | CommandNext { workDirCommand :: Maybe FilePath
+                 ,  configFile :: Maybe FilePath
+                 ,  shouldPrint :: ShouldPrint}
     deriving (Show, Eq)
 
-data Flags
-    = Flags
+data Flags =
+    Flags
     deriving (Show, Eq)
 
-data Configuration
-    = Configuration
+data Configuration = Configuration
+    { workDirConfig :: FilePath
+    , shouldPrintConfig :: ShouldPrint
+    } deriving (Show, Eq)
+
+data Settings =
+    Settings
     deriving (Show, Eq)
+
+defaultShouldPrint :: ShouldPrint
+defaultShouldPrint = Warning
 
 data Dispatch
-    = Dispatch
-    deriving (Show, Eq)
-
-data Settings
-    = Settings
+    = DispatchWaiting { workDir :: Path Abs Dir
+                     ,  shouldPrintDispatch :: ShouldPrint}
+    | DispatchNext { workDir :: Path Abs Dir
+                  ,  shouldPrintDispatch :: ShouldPrint}
     deriving (Show, Eq)
