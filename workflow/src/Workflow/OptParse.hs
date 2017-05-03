@@ -26,47 +26,74 @@ getSettings _ = Settings
 getDispatch :: Command -> Flags -> IO Dispatch
 getDispatch cmd flags = do
     config <- getConfig cmd flags
-    getDispatchFromConfig cmd config
+    getDispatchFromConfig config
 
-getDispatchFromConfig :: Command -> Configuration -> IO Dispatch
-getDispatchFromConfig CommandWaiting {..} Configuration {..} = do
+getDispatchFromConfig :: Configuration -> IO Dispatch
+getDispatchFromConfig ConfigWaiting {..} = do
     configPath <- parseAbsDir workDirConfig
     pure $ DispatchWaiting configPath shouldPrintConfig
+getDispatchFromConfig ConfigNext {..} = do
+    configPath <- parseAbsDir projectDirConfig
+    pure $ DispatchNext configPath shouldPrintConfig
 
 getConfig :: Command -> Flags -> IO Configuration
-getConfig CommandWaiting {..} _ =
-    getConfigFromInput workDirCommand configFile shouldPrint
+getConfig CommandWaiting {..} _ = do
+    configPath <- getConfigPathFromInput configFile
+    shouldPrint <- getShouldPrintFromInput configPath shouldPrintWaiting
+    workDir <- getWorkDirFromInput configPath workDirCommand
+    pure $ ConfigWaiting workDir shouldPrint
+getConfig CommandNext {..} _ = do
+    configPath <- getConfigPathFromInput configFile
+    shouldPrint <- getShouldPrintFromInput configPath shouldPrintNext
+    projectDir <- getWorkDirFromInput configPath projectDirCommand
+    pure $ ConfigNext projectDir shouldPrint
 
-getConfigFromInput :: Maybe FilePath
-                   -> Maybe FilePath
-                   -> ShouldPrint
-                   -> IO Configuration
-getConfigFromInput workDir configFile _ = do
-    configPath <-
-        case configFile of
-            Nothing -> defaultConfigFile
-            Just path -> resolveFile' path
-    dirPath <- getDirPathFromConfigPath configPath
-    shouldPrintConfig <- getShouldPrintPathFromConfigPath configPath
-    workDirConfig <-
-        case workDir of
-            Nothing -> pure dirPath
-            Just directoryPath -> parseAbsDir directoryPath
-    pure $ Configuration (fromAbsDir workDirConfig) shouldPrintConfig
+getConfigPathFromInput :: Maybe FilePath -> IO (Path Abs File)
+getConfigPathFromInput configFile =
+    case configFile of
+        Nothing -> defaultConfigFile
+        Just path -> resolveFile' path
 
-getDirPathFromConfigPath :: Path Abs File -> IO (Path Abs Dir)
-getDirPathFromConfigPath confPath = do
+getShouldPrintFromInput :: Path Abs File -> Maybe ShouldPrint -> IO ShouldPrint
+getShouldPrintFromInput configPath shouldPrint =
+    case shouldPrint of
+        Just x -> pure x
+        Nothing -> do
+            shouldPrintConfig <- getShouldPrintFromConfigPath configPath
+            case shouldPrintConfig of
+                Nothing -> pure defaultShouldPrint
+                Just x -> pure x
+
+getWorkDirFromInput :: Path Abs File -> Maybe FilePath -> IO FilePath
+getWorkDirFromInput configPath workDir =
+    fromAbsDir <$>
+    case workDir of
+        Nothing -> getWorkDirPathFromConfigPath configPath
+        Just directoryPath -> parseAbsDir directoryPath
+
+getProjectDirFromInput :: Path Abs File -> Maybe FilePath -> IO FilePath
+getProjectDirFromInput configPath projectDir =
+    fromAbsDir <$>
+    case projectDir of
+        Nothing -> getProjectDirPathFromConfigPath configPath
+        Just directoryPath -> parseAbsDir directoryPath
+
+getWorkDirPathFromConfigPath :: Path Abs File -> IO (Path Abs Dir)
+getWorkDirPathFromConfigPath confPath = do
     config <- load [Optional $ toFilePath confPath]
-    dirPathString <- lookup config "path"
+    dirPathString <- lookup config "workDir"
     formatDirPath dirPathString
 
-getShouldPrintPathFromConfigPath :: Path Abs File -> IO ShouldPrint
-getShouldPrintPathFromConfigPath confPath = do
+getProjectDirPathFromConfigPath :: Path Abs File -> IO (Path Abs Dir)
+getProjectDirPathFromConfigPath confPath = do
     config <- load [Optional $ toFilePath confPath]
-    shouldPrintConfig <- lookup config "shouldPrint"
-    case shouldPrintConfig of
-        Nothing -> pure defaultShouldPrint
-        Just shouldPrint -> pure shouldPrint
+    dirPathString <- lookup config "projectsDir"
+    formatDirPath dirPathString
+
+getShouldPrintFromConfigPath :: Path Abs File -> IO (Maybe ShouldPrint)
+getShouldPrintFromConfigPath confPath = do
+    config <- load [Optional $ toFilePath confPath]
+    lookup config "shouldPrint"
 
 formatDirPath :: Maybe String -> IO (Path Abs Dir)
 formatDirPath Nothing = do
@@ -117,16 +144,35 @@ parseArgs :: Parser Arguments
 parseArgs = (,) <$> parseCommand <*> parseFlags
 
 parseCommand :: Parser Command
-parseCommand = hsubparser $ mconcat [command "waiting" parseCommandWaiting]
+parseCommand =
+    hsubparser $
+    mconcat
+        [command "waiting" parseCommandWaiting, command "next" parseCommandNext]
 
 parseCommandWaiting :: ParserInfo Command
-parseCommandWaiting = info commandParser modifier
+parseCommandWaiting = info commandWaitingParser modifier
   where
     modifier = fullDesc <> progDesc "Print a list of the \"waiting\" tasks"
 
-commandParser :: Parser Command
-commandParser =
-    CommandWaiting <$>
+parseCommandNext :: ParserInfo Command
+parseCommandNext = info commandNextParser modifier
+  where
+    modifier =
+        fullDesc <>
+        progDesc
+            "Print the list of \"next\" tasks as well as the files which don't have a \"next\" action"
+
+commandWaitingParser :: Parser Command
+commandWaitingParser =
+    CommandWaiting <$> workflowDirParser <*> configFileParser <*>
+    shouldPrintParser
+
+commandNextParser :: Parser Command
+commandNextParser =
+    CommandNext <$> projectDirParser <*> configFileParser <*> shouldPrintParser
+
+configFileParser :: Parser (Maybe FilePath)
+configFileParser =
     option
         (Just <$> str)
         (mconcat
@@ -134,7 +180,10 @@ commandParser =
              , help "Give the path to an altenative config file"
              , value Nothing
              , metavar "FILEPATH"
-             ]) <*>
+             ])
+
+workflowDirParser :: Parser (Maybe FilePath)
+workflowDirParser =
     option
         (Just <$> str)
         (mconcat
@@ -142,15 +191,29 @@ commandParser =
              , help "Give the path to the workflow directory to be used"
              , value Nothing
              , metavar "FILEPATH"
-             ]) <*>
+             ])
+
+projectDirParser :: Parser (Maybe FilePath)
+projectDirParser =
     option
-        (maybeReader getShouldPrint)
+        (Just <$> str)
+        (mconcat
+             [ long "project-dir"
+             , help "Give the path to the project directory to be used"
+             , value Nothing
+             , metavar "FILEPATH"
+             ])
+
+shouldPrintParser :: Parser (Maybe ShouldPrint)
+shouldPrintParser =
+    option
+        (Just <$> maybeReader getShouldPrint)
         (mconcat
              [ long "should-print"
              , help
                    "This describes whether error messages should be handled as errors (\"error\"), warnings (\"warning\") or ignored (\"nothing\")."
              , showDefault
-             , value defaultShouldPrint
+             , value Nothing
              , metavar "shouldPrint"
              ])
 

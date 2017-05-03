@@ -6,12 +6,21 @@ import Data.Time.LocalTime
 import Import
 import System.Directory
 import Test.Hspec
+import Workflow.Next
 import Workflow.OptParse
 import Workflow.Utils
 import Workflow.Waiting
 
 findWorkDir :: IO (Path Abs Dir)
 findWorkDir = resolveDir' "../test_resources/workflow"
+
+getNextTasks :: IO (String, [[String]])
+getNextTasks = do
+    workflowPath <- findWorkDir
+    files <- getOrgfilesFromDir workflowPath
+    result <- mapM (pathToTableOfNexts workflowPath) files
+    let (listErrMess, tablesOfNexts) = partitionEithers result
+    pure (concat listErrMess, concat tablesOfNexts)
 
 spec :: Spec
 spec =
@@ -57,7 +66,7 @@ spec =
                 writeFile
                     (fromAbsFile hiddenFile)
                     "* WAITING THIS SHOULD NOT APPEAR"
-                files <- getFilesFromDir dirPath
+                files <- getOrgfilesFromDir dirPath
                 files `shouldBe` []
         describe "timezones" $
             it "Workflow doesn't have a problem with timezones" $ do
@@ -80,3 +89,19 @@ spec =
                 strings <- headingsToString headings
                 removePathForcibly $ fromAbsFile timezoneFile
                 strings `shouldBe` "timezone.org WAITING timezone 0 days\n"
+        describe "nextTasks" $
+            it "finds all NEXT tasks" $ do
+                (_, tableOfNexts) <- getNextTasks
+                length tableOfNexts `shouldBe` 3
+        describe "nextErrorMessages" $
+            it "Next generates no error messages" $ do
+                (errMess, _) <- getNextTasks
+                errMess `shouldBe` ""
+        describe "nextFormatting" $
+            it "Next formats correctly" $ do
+                (_, tableOfNexts) <- getNextTasks
+                let strings = lines $ formatStrings tableOfNexts
+                head strings `shouldBe`
+                    "projects/noNext.org This file has no next task"
+                last strings `shouldBe`
+                    "projects/test.org   a next task               "
