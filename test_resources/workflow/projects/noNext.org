@@ -1,0 +1,15 @@
+* An org-file for testing the workflow executable
+** done tasks
+*** DONE a waiting task which is done now
+    CLOSED: [2017-03-23 Thu 18:46]
+    - State "DONE"       from "WAITING"    [2017-03-23 Thu 18:46] 
+** todo tasks
+*** TODO a todo task
+
+
+
+    
+
+
+
+
