@@ -18,8 +18,8 @@ import System.FilePath.Posix
 import Text.PrettyPrint.Boxes
 import Workflow.OptParse
 
-formatStringAsTables :: [[String]] -> String
-formatStringAsTables list =
+formatStringAsTable :: [[String]] -> String
+formatStringAsTable list =
     let boxes = transpose $ fmap text <$> list
         table = hsep 1 center1 $ fmap (vcat left) boxes
     in render table
@@ -32,7 +32,7 @@ getHeadingsFromDir workDir _ = do
     textList <- mapM (readFileAndRememberPath workDir) files
     let (errorMessages, listHeadings) =
             partitionEithers $ fmap getHeadingsFromFile textList
-    pure (concat listHeadings, concat errorMessages)
+    pure (concat listHeadings, unlines errorMessages)
 
 getFilesFromDir :: Path Abs Dir -> IO [Path Abs File]
 getFilesFromDir workPath = do
