@@ -59,9 +59,6 @@ readFileAndRememberPath workDir filePath = do
 nominalDay :: NominalDiffTime
 nominalDay = 86400
 
-nominalHour :: NominalDiffTime
-nominalHour = 3600
-
 getDate :: Heading -> Maybe LocalTime
 getDate Heading {..} =
     let stringDate =
