@@ -57,7 +57,7 @@ getConfigFromInput workDir configFile _ = do
 getDirPathFromConfigPath :: Path Abs File -> IO (Path Abs Dir)
 getDirPathFromConfigPath confPath = do
     config <- load [Optional $ toFilePath confPath]
-    dirPathString <- lookup config "path"
+    dirPathString <- lookup config "workDir"
     formatDirPath dirPathString
 
 getShouldPrintPathFromConfigPath :: Path Abs File -> IO ShouldPrint
