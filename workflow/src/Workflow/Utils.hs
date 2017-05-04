@@ -18,8 +18,8 @@ import System.FilePath.Posix
 import Text.PrettyPrint.Boxes
 import Workflow.OptParse
 
-formatStrings :: [[String]] -> String
-formatStrings list =
+formatStringAsTables :: [[String]] -> String
+formatStringAsTables list =
     let boxes = transpose $ fmap text <$> list
         table = hsep 1 center1 $ fmap (vcat left) boxes
     in render table
@@ -99,5 +99,12 @@ getDocument :: Text -> Either String Document
 getDocument content =
     let parser =
             parseDocument
-                ["WAITING", "TODO", "CANCELLED", "DONE", "READY", "NEXT"]
+                [ "WAITING"
+                , "TODO"
+                , "CANCELLED"
+                , "DONE"
+                , "READY"
+                , "NEXT"
+                , "STARTED"
+                ]
     in parseOnly parser content :: Either String Document
