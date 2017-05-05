@@ -16,8 +16,9 @@ library
         Workflow.Types
         Workflow.OptParse
         Workflow.OptParse.Types
-        Workflow.Utils
         Workflow.Waiting
+        Workflow.Next
+        Workflow.Utils
         Import
     build-depends:
         base >=4.9 && <5,

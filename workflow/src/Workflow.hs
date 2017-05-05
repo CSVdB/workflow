@@ -3,6 +3,7 @@
 module Workflow where
 
 import Import
+import Workflow.Next
 import Workflow.OptParse
 import Workflow.Waiting
 
@@ -13,3 +14,4 @@ workflow = do
 
 execute :: Dispatch -> Settings -> IO ()
 execute DispatchWaiting {..} = waiting workDir shouldPrintDispatch
+execute DispatchNext {..} = next projectDir shouldPrintDispatch

@@ -6,7 +6,7 @@ module Workflow.OptParse.Types where
 
 import Data.Configurator.Types
 import qualified Data.Text as T
-import Introduction
+import Import
 
 data ShouldPrint
     = Error
@@ -27,20 +27,25 @@ type Arguments = (Command, Flags)
 
 type Instructions = (Dispatch, Settings)
 
-data Command = CommandWaiting
-    { workDirCommand :: Maybe FilePath
-    , configFile :: Maybe FilePath
-    , shouldPrint :: ShouldPrint
-    } deriving (Show, Eq)
+data Command
+    = CommandWaiting { workDirCommand :: Maybe FilePath
+                    ,  configFile :: Maybe FilePath
+                    ,  shouldPrintWaiting :: Maybe ShouldPrint}
+    | CommandNext { projectDirCommand :: Maybe FilePath
+                 ,  configFile :: Maybe FilePath
+                 ,  shouldPrintNext :: Maybe ShouldPrint}
+    deriving (Show, Eq)
 
 data Flags =
     Flags
     deriving (Show, Eq)
 
-data Configuration = Configuration
-    { workDirConfig :: FilePath
-    , shouldPrintConfig :: ShouldPrint
-    } deriving (Show, Eq)
+data Configuration
+    = ConfigWaiting { workDirConfig :: FilePath
+                   ,  shouldPrintConfig :: ShouldPrint}
+    | ConfigNext { projectDirConfig :: FilePath
+                ,  shouldPrintConfig :: ShouldPrint}
+    deriving (Show, Eq)
 
 data Settings =
     Settings
@@ -49,7 +54,9 @@ data Settings =
 defaultShouldPrint :: ShouldPrint
 defaultShouldPrint = Warning
 
-data Dispatch = DispatchWaiting
-    { workDir :: Path Abs Dir
-    , shouldPrintDispatch :: ShouldPrint
-    } deriving (Show, Eq)
+data Dispatch
+    = DispatchWaiting { workDir :: Path Abs Dir
+                     ,  shouldPrintDispatch :: ShouldPrint}
+    | DispatchNext { projectDir :: Path Abs Dir
+                  ,  shouldPrintDispatch :: ShouldPrint}
+    deriving (Show, Eq)

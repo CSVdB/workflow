@@ -28,14 +28,14 @@ getHeadingsFromDir :: Path Abs Dir
                    -> Settings
                    -> IO ([(Heading, Path Rel File)], String)
 getHeadingsFromDir workDir _ = do
-    files <- getFilesFromDir workDir
+    files <- getOrgfilesFromDir workDir
     textList <- mapM (readFileAndRememberPath workDir) files
     let (errorMessages, listHeadings) =
             partitionEithers $ fmap getHeadingsFromFile textList
     pure (concat listHeadings, unlines errorMessages)
 
-getFilesFromDir :: Path Abs Dir -> IO [Path Abs File]
-getFilesFromDir workPath = do
+getOrgfilesFromDir :: Path Abs Dir -> IO [Path Abs File]
+getOrgfilesFromDir workPath = do
     (_, files) <- listDirRecur workPath
     let endsInOrg file = ".org" == fileExtension file
     pure $ filter (not . isHidden) $ filter endsInOrg files
@@ -99,12 +99,5 @@ getDocument :: Text -> Either String Document
 getDocument content =
     let parser =
             parseDocument
-                [ "WAITING"
-                , "TODO"
-                , "CANCELLED"
-                , "DONE"
-                , "READY"
-                , "NEXT"
-                , "STARTED"
-                ]
+                ["WAITING", "TODO", "CANCELLED", "DONE", "READY", "NEXT"]
     in parseOnly parser content :: Either String Document
