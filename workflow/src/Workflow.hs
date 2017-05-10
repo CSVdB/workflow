@@ -13,5 +13,7 @@ workflow = do
     execute disp sett
 
 execute :: Dispatch -> Settings -> IO ()
-execute DispatchWaiting {..} = waiting workDir shouldPrintDispatch
-execute DispatchNext {..} = next projectDir shouldPrintDispatch
+execute (DispatchWaiting WaitingArgsDispatch {..}) =
+    waiting dspWworkDir dspWaitingShouldPrint
+execute (DispatchNext NextArgsDispatch {..}) =
+    next dspProjectDir dspNextShouldPrint

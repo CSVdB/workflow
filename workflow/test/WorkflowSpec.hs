@@ -30,7 +30,7 @@ getWaitingTasksAsString =
 getNextTasks :: IO (String, [[String]])
 getNextTasks = do
     workflowPath <- findWorkDir
-    files <- getOrgfilesFromDir workflowPath
+    files <- getOrgFilesFromDirRecur workflowPath
     result <- mapM (pathToTableOfNexts workflowPath) files
     let (listErrMess, tablesOfNexts) = partitionEithers result
     pure (concat listErrMess, concat tablesOfNexts)
@@ -68,7 +68,7 @@ spec =
                 writeFile
                     (fromAbsFile hiddenFile)
                     "* WAITING THIS SHOULD NOT APPEAR"
-                files <- getOrgfilesFromDir dirPath
+                files <- getOrgFilesFromDirRecur dirPath
                 files `shouldBe` []
         describe "timezones" $
             it "Workflow doesn't have a problem with timezones" $ do
@@ -94,16 +94,16 @@ spec =
         describe "nextTasks" $
             it "finds all NEXT tasks" $ do
                 (_, tableOfNexts) <- getNextTasks
-                length tableOfNexts `shouldBe` 5
+                length tableOfNexts `shouldBe` 1
         describe "nextErrorMessages" $
-            it "Next generates no error messages" $ do
+            it "Next generates the correct error messages" $ do
                 (errMess, _) <- getNextTasks
-                errMess `shouldBe` ""
+                errMess `shouldBe` "projects/noNext.org has no next task!"
         describe "nextFormatting" $
             it "Next formats correctly" $ do
                 (_, tableOfNexts) <- getNextTasks
                 let strings = formatStringAsTable tableOfNexts
                 head (lines strings) `shouldBe`
-                    "projects/noNext.org This file has no next task "
+                    "projects/test.org NEXT a next task"
                 last (lines strings) `shouldBe`
-                    "projects/test.org   a next task                "
+                    "projects/test.org NEXT a next task"

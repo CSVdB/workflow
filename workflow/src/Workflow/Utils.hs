@@ -18,6 +18,12 @@ import System.FilePath.Posix
 import Text.PrettyPrint.Boxes
 import Workflow.OptParse
 
+printErrMess :: [String] -> ShouldPrint -> IO ()
+printErrMess [] Error = pure ()
+printErrMess errMess Error = die $ unlines errMess
+printErrMess errMess Warning = putStr $ unlines errMess
+printErrMess _ Not = pure ()
+
 formatStringAsTable :: [[String]] -> String
 formatStringAsTable list =
     let boxes = transpose $ fmap text <$> list
@@ -26,19 +32,23 @@ formatStringAsTable list =
 
 getHeadingsFromDir :: Path Abs Dir
                    -> Settings
-                   -> IO ([(Heading, Path Rel File)], String)
+                   -> IO ([(Heading, Path Rel File)], [String])
 getHeadingsFromDir workDir _ = do
-    files <- getOrgfilesFromDir workDir
+    files <- getOrgFilesFromDirRecur workDir
     textList <- mapM (readFileAndRememberPath workDir) files
     let (errorMessages, listHeadings) =
             partitionEithers $ fmap getHeadingsFromFile textList
-    pure (concat listHeadings, unlines errorMessages)
+    pure (concat listHeadings, errorMessages)
 
-getOrgfilesFromDir :: Path Abs Dir -> IO [Path Abs File]
-getOrgfilesFromDir workPath = do
-    (_, files) <- listDirRecur workPath
-    let endsInOrg file = ".org" == fileExtension file
-    pure $ filter (not . isHidden) $ filter endsInOrg files
+getOrgFilesFromDir :: Path Abs Dir -> IO [Path Abs File]
+getOrgFilesFromDir projectDir = filter isOrgFile . snd <$> listDir projectDir
+
+getOrgFilesFromDirRecur :: Path Abs Dir -> IO [Path Abs File]
+getOrgFilesFromDirRecur projectDir =
+    filter isOrgFile . snd <$> listDirRecur projectDir
+
+isOrgFile :: Path Abs File -> Bool
+isOrgFile file = (not . isHidden) file && fileExtension file == ".org"
 
 isHidden :: Path Abs File -> Bool
 isHidden = any startsWithDot . splitDirectories . fromAbsFile
@@ -99,5 +109,12 @@ getDocument :: Text -> Either String Document
 getDocument content =
     let parser =
             parseDocument
-                ["WAITING", "TODO", "CANCELLED", "DONE", "READY", "NEXT"]
+                [ "WAITING"
+                , "TODO"
+                , "CANCELLED"
+                , "DONE"
+                , "READY"
+                , "NEXT"
+                , "STARTED"
+                ]
     in parseOnly parser content :: Either String Document

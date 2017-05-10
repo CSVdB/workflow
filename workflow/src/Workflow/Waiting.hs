@@ -17,11 +17,8 @@ import Workflow.Utils
 waiting :: Path Abs Dir -> ShouldPrint -> Settings -> IO ()
 waiting workDir shouldPrint settings = do
     (waitingHeadings, errMess) <- getWaitingHeadings workDir settings
-    case shouldPrint of
-        Error -> die errMess
-        Warning -> putStr errMess
-        Not -> pure ()
     string <- headingsToString waitingHeadings
+    printErrMess errMess shouldPrint
     putStr string
 
 headingsToString :: [(Heading, Path Rel File)] -> IO String
@@ -32,7 +29,7 @@ headingsToString waitingHeadings = do
 
 getWaitingHeadings :: Path Abs Dir
                    -> Settings
-                   -> IO ([(Heading, Path Rel File)], String)
+                   -> IO ([(Heading, Path Rel File)], [String])
 getWaitingHeadings workDir sett = do
     (headings, errMess) <- getHeadingsFromDir workDir sett
     pure (filter (isWaiting . fst) headings, errMess)

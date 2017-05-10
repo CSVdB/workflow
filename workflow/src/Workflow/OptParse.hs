@@ -9,6 +9,7 @@ module Workflow.OptParse
     ) where
 
 import Data.Configurator
+import Data.Configurator.Types
 import Import hiding (lookup)
 import Options.Applicative
 import System.Environment
@@ -25,90 +26,81 @@ getSettings _ = Settings
 
 getDispatch :: Command -> Flags -> IO Dispatch
 getDispatch cmd flags = do
-    config <- getConfig cmd flags
-    getDispatchFromConfig config
+    cfg <- getConfig cmd flags
+    getDispatchFromConfig cmd cfg
 
-getDispatchFromConfig :: Configuration -> IO Dispatch
-getDispatchFromConfig ConfigWaiting {..} = do
-    configPath <- parseAbsDir workDirConfig
-    pure $ DispatchWaiting configPath shouldPrintConfig
-getDispatchFromConfig ConfigNext {..} = do
-    configPath <- parseAbsDir projectDirConfig
-    pure $ DispatchNext configPath shouldPrintConfig
+getDispatchFromConfig :: Command -> Configuration -> IO Dispatch
+getDispatchFromConfig (CommandWaiting _) Configuration {..} =
+    pure $ DispatchWaiting $ WaitingArgsDispatch cfgWorkDir cfgShouldPrint
+getDispatchFromConfig (CommandNext _) Configuration {..} =
+    pure $ DispatchNext $ NextArgsDispatch cfgProjectDir cfgShouldPrint
 
 getConfig :: Command -> Flags -> IO Configuration
-getConfig CommandWaiting {..} _ = do
-    configPath <- getConfigPathFromInput configFile
-    shouldPrint <- getShouldPrintFromInput configPath shouldPrintWaiting
-    workDir <- getWorkDirFromInput configPath workDirCommand
-    pure $ ConfigWaiting workDir shouldPrint
-getConfig CommandNext {..} _ = do
-    configPath <- getConfigPathFromInput configFile
-    shouldPrint <- getShouldPrintFromInput configPath shouldPrintNext
-    projectDir <- getWorkDirFromInput configPath projectDirCommand
-    pure $ ConfigNext projectDir shouldPrint
+getConfig cmd Flags {..} = do
+    cfgPath <- getConfigPathFromInput flagsConfigFile
+    shouldPrint <- getShouldPrintFromInput cfgPath flagsShouldPrint
+    workDirPath <-
+        case cmd of
+            CommandWaiting args -> getWorkDirFromInput cfgPath $ cmdWorkDir args
+            _ -> getDefaultWorkDir cfgPath
+    workDir <- parseAbsDir workDirPath
+    projectDir <-
+        case cmd of
+            CommandNext args ->
+                getProjectDirFromInput cfgPath $ cmdProjectDir args
+            _ -> getDefaultProjectDir cfgPath
+    pure $ Configuration workDir projectDir shouldPrint
 
 getConfigPathFromInput :: Maybe FilePath -> IO (Path Abs File)
 getConfigPathFromInput configFile =
-    case configFile of
-        Nothing -> defaultConfigFile
-        Just path -> resolveFile' path
+    fromMaybe defaultConfigFile $ resolveFile' <$> configFile
 
 getShouldPrintFromInput :: Path Abs File -> Maybe ShouldPrint -> IO ShouldPrint
-getShouldPrintFromInput configPath shouldPrint =
-    case shouldPrint of
-        Just x -> pure x
-        Nothing -> do
-            shouldPrintConfig <- getShouldPrintFromConfigPath configPath
-            case shouldPrintConfig of
-                Nothing -> pure defaultShouldPrint
-                Just x -> pure x
+getShouldPrintFromInput configPath shouldPrint = do
+    shouldPrintConfig <- getShouldPrintFromConfigPath configPath
+    pure $
+        fromMaybe (fromMaybe defaultShouldPrint shouldPrintConfig) shouldPrint
 
 getWorkDirFromInput :: Path Abs File -> Maybe FilePath -> IO FilePath
-getWorkDirFromInput configPath workDir =
-    fromAbsDir <$>
-    case workDir of
-        Nothing -> getWorkDirPathFromConfigPath configPath
-        Just directoryPath -> parseAbsDir directoryPath
+getWorkDirFromInput cfgFile workDir = do
+    defaultWorkDir <- getDefaultWorkDir cfgFile
+    pure $ fromMaybe defaultWorkDir workDir
+
+getDefaultWorkDir :: Path Abs File -> IO FilePath
+getDefaultWorkDir = getSomePathFromConfigPath "workDir"
 
 getProjectDirFromInput :: Path Abs File -> Maybe FilePath -> IO FilePath
-getProjectDirFromInput configPath projectDir =
-    fromAbsDir <$>
-    case projectDir of
-        Nothing -> getProjectDirPathFromConfigPath configPath
-        Just directoryPath -> parseAbsDir directoryPath
+getProjectDirFromInput cfgFile projectDir = do
+    defaultProjectDir <- getDefaultProjectDir cfgFile
+    pure $ fromMaybe defaultProjectDir projectDir
 
-getWorkDirPathFromConfigPath :: Path Abs File -> IO (Path Abs Dir)
-getWorkDirPathFromConfigPath confPath = do
-    config <- load [Optional $ toFilePath confPath]
-    dirPathString <- lookup config "workDir"
-    formatDirPath dirPathString
+getDefaultProjectDir :: Path Abs File -> IO FilePath
+getDefaultProjectDir = getSomePathFromConfigPath "projects"
 
-getProjectDirPathFromConfigPath :: Path Abs File -> IO (Path Abs Dir)
-getProjectDirPathFromConfigPath confPath = do
+getSomePathFromConfigPath :: Name -> Path Abs File -> IO FilePath
+getSomePathFromConfigPath name confPath = do
     config <- load [Optional $ toFilePath confPath]
-    dirPathString <- lookup config "projectsDir"
-    formatDirPath dirPathString
+    path <- lookup config name
+    formatDirPath path
 
 getShouldPrintFromConfigPath :: Path Abs File -> IO (Maybe ShouldPrint)
 getShouldPrintFromConfigPath confPath = do
     config <- load [Optional $ toFilePath confPath]
     lookup config "shouldPrint"
 
-formatDirPath :: Maybe String -> IO (Path Abs Dir)
+formatDirPath :: Maybe String -> IO FilePath
 formatDirPath Nothing = do
     home <- getHomeDir
-    resolveDir home "workflow"
+    pure $ fromAbsDir home ++ "workflow"
 formatDirPath (Just dirPathString) =
     case dirPathString of
         '~':_ -> do
             home <- getHomeDir
-            dirPath <- resolveDir home $ drop 2 dirPathString
-            print dirPath
-            pure dirPath
+            pure $ fromAbsDir home ++ drop 2 dirPathString
+        '/':_ -> pure dirPathString
         _ -> do
             currentDir <- getCurrentDir
-            resolveDir currentDir dirPathString
+            pure $ fromAbsDir currentDir ++ dirPathString
 
 defaultConfigFile :: IO (Path Abs File)
 defaultConfigFile = do
@@ -150,37 +142,19 @@ parseCommand =
         [command "waiting" parseCommandWaiting, command "next" parseCommandNext]
 
 parseCommandWaiting :: ParserInfo Command
-parseCommandWaiting = info commandWaitingParser modifier
+parseCommandWaiting = info parser modifier
   where
     modifier = fullDesc <> progDesc "Print a list of the \"waiting\" tasks"
+    parser = CommandWaiting . WaitingArgsCommand <$> workflowDirParser
 
 parseCommandNext :: ParserInfo Command
-parseCommandNext = info commandNextParser modifier
+parseCommandNext = info parser modifier
   where
     modifier =
         fullDesc <>
         progDesc
-            "Print the list of \"next\" tasks as well as the files which don't have a \"next\" action"
-
-commandWaitingParser :: Parser Command
-commandWaitingParser =
-    CommandWaiting <$> workflowDirParser <*> configFileParser <*>
-    shouldPrintParser
-
-commandNextParser :: Parser Command
-commandNextParser =
-    CommandNext <$> projectDirParser <*> configFileParser <*> shouldPrintParser
-
-configFileParser :: Parser (Maybe FilePath)
-configFileParser =
-    option
-        (Just <$> str)
-        (mconcat
-             [ long "config-file"
-             , help "Give the path to an altenative config file"
-             , value Nothing
-             , metavar "FILEPATH"
-             ])
+            "Print the next actions and warn when a file does not have one."
+    parser = CommandNext . NextArgsCommand <$> projectDirParser
 
 workflowDirParser :: Parser (Maybe FilePath)
 workflowDirParser =
@@ -204,6 +178,17 @@ projectDirParser =
              , metavar "FILEPATH"
              ])
 
+configFileParser :: Parser (Maybe FilePath)
+configFileParser =
+    option
+        (Just <$> str)
+        (mconcat
+             [ long "config-file"
+             , help "Give the path to an altenative config file"
+             , value Nothing
+             , metavar "FILEPATH"
+             ])
+
 shouldPrintParser :: Parser (Maybe ShouldPrint)
 shouldPrintParser =
     option
@@ -218,4 +203,4 @@ shouldPrintParser =
              ])
 
 parseFlags :: Parser Flags
-parseFlags = pure Flags
+parseFlags = Flags <$> configFileParser <*> shouldPrintParser

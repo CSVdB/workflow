@@ -17,6 +17,7 @@ data ShouldPrint
 getShouldPrint :: String -> Maybe ShouldPrint
 getShouldPrint "error" = Just Error
 getShouldPrint "nothing" = Just Not
+getShouldPrint "warning" = Just Warning
 getShouldPrint _ = Nothing
 
 instance Configured ShouldPrint where
@@ -27,25 +28,29 @@ type Arguments = (Command, Flags)
 
 type Instructions = (Dispatch, Settings)
 
+newtype WaitingArgsCommand = WaitingArgsCommand
+    { cmdWorkDir :: Maybe FilePath
+    } deriving (Show, Eq)
+
+newtype NextArgsCommand = NextArgsCommand
+    { cmdProjectDir :: Maybe FilePath
+    } deriving (Show, Eq)
+
 data Command
-    = CommandWaiting { workDirCommand :: Maybe FilePath
-                    ,  configFile :: Maybe FilePath
-                    ,  shouldPrintWaiting :: Maybe ShouldPrint}
-    | CommandNext { projectDirCommand :: Maybe FilePath
-                 ,  configFile :: Maybe FilePath
-                 ,  shouldPrintNext :: Maybe ShouldPrint}
+    = CommandWaiting WaitingArgsCommand
+    | CommandNext NextArgsCommand
     deriving (Show, Eq)
 
-data Flags =
-    Flags
-    deriving (Show, Eq)
+data Flags = Flags
+    { flagsConfigFile :: Maybe FilePath
+    , flagsShouldPrint :: Maybe ShouldPrint
+    } deriving (Show, Eq)
 
-data Configuration
-    = ConfigWaiting { workDirConfig :: FilePath
-                   ,  shouldPrintConfig :: ShouldPrint}
-    | ConfigNext { projectDirConfig :: FilePath
-                ,  shouldPrintConfig :: ShouldPrint}
-    deriving (Show, Eq)
+data Configuration = Configuration
+    { cfgWorkDir :: Path Abs Dir
+    , cfgProjectDir :: FilePath
+    , cfgShouldPrint :: ShouldPrint
+    } deriving (Show, Eq)
 
 data Settings =
     Settings
@@ -54,9 +59,17 @@ data Settings =
 defaultShouldPrint :: ShouldPrint
 defaultShouldPrint = Warning
 
+data WaitingArgsDispatch = WaitingArgsDispatch
+    { dspWworkDir :: Path Abs Dir
+    , dspWaitingShouldPrint :: ShouldPrint
+    } deriving (Show, Eq)
+
+data NextArgsDispatch = NextArgsDispatch
+    { dspProjectDir :: FilePath
+    , dspNextShouldPrint :: ShouldPrint
+    } deriving (Show, Eq)
+
 data Dispatch
-    = DispatchWaiting { workDir :: Path Abs Dir
-                     ,  shouldPrintDispatch :: ShouldPrint}
-    | DispatchNext { projectDir :: Path Abs Dir
-                  ,  shouldPrintDispatch :: ShouldPrint}
+    = DispatchWaiting WaitingArgsDispatch
+    | DispatchNext NextArgsDispatch
     deriving (Show, Eq)
