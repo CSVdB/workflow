@@ -13,12 +13,12 @@ import Workflow.Utils
 next :: FilePath -> ShouldPrint -> Settings -> IO ()
 next projectDirPath shouldPrint _ = do
     result <-
-        case lastN 2 projectDirPath of
+        case (take 2 . reverse) projectDirPath of
             "**" -> do
                 projectDir <- parseAbsDir projectDirPath
                 files <- getOrgFilesFromDirRecur projectDir
                 mapM (pathToTableOfNexts projectDir) files
-            _:"*" -> do
+            '*':_ -> do
                 projectDir <- parseAbsDir $ init projectDirPath
                 files <- getOrgFilesFromDir projectDir
                 mapM (pathToTableOfNexts projectDir) files
@@ -29,14 +29,10 @@ next projectDirPath shouldPrint _ = do
     let (errMess, tablesOfNexts) = partitionEithers result
     let tableOfNexts = concat tablesOfNexts
     printErrMess errMess shouldPrint
-    putStr $ formatStringAsTable $ reverse $ sortOn noNextsFound tableOfNexts
+    putStr $ formatStringAsTable tableOfNexts
 
 lastN :: Int -> [a] -> [a] -- lastN n xs returns the last n elements of xs
 lastN n xs = foldl' (const . drop 1) xs (drop n xs)
-
-noNextsFound :: [String] -> Bool
-noNextsFound (_:descr:_) = descr == "This file has no next task"
-noNextsFound _ = False
 
 pathToTableOfNexts :: Path Abs Dir
                    -> Path Abs File
@@ -68,8 +64,10 @@ shouldBePrinted Heading {..} =
     elem keyword $ map (Just . StateKeyword) ["NEXT", "STARTED"]
 
 nextHeadingToStrings :: FilePath -> Heading -> [String]
-nextHeadingToStrings path Heading {..} =
-    case keyword of
-        Just (StateKeyword "NEXT") -> [path, "NEXT " ++ T.unpack title]
-        Just (StateKeyword "STARTED") -> [path, "STARTED " ++ T.unpack title]
-        _ -> []
+nextHeadingToStrings path heading@Heading {..} =
+    if shouldBePrinted heading
+        then [ path
+             , (T.unpack . unStateKeyword . fromJust) keyword ++
+               " " ++ T.unpack title
+             ]
+        else []

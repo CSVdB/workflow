@@ -16,4 +16,4 @@ execute :: Dispatch -> Settings -> IO ()
 execute (DispatchWaiting WaitingArgsDispatch {..}) =
     waiting dspWworkDir dspWaitingShouldPrint
 execute (DispatchNext NextArgsDispatch {..}) =
-    next dspProjectDir dspNextShouldPrint
+    next dspProjectsGlob dspNextShouldPrint
