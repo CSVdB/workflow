@@ -14,13 +14,12 @@ import Data.Time.Clock
 import Data.Time.Format
 import Data.Time.LocalTime
 import Import
-import System.FilePath.Posix
 import Text.PrettyPrint.Boxes
 import Workflow.OptParse
 
 printErrMess :: [String] -> ShouldPrint -> IO ()
 printErrMess [] Error = pure ()
-printErrMess errMess Error = die $ unlines errMess
+printErrMess errMess Error = die $ init $ init $ unlines errMess
 printErrMess errMess Warning = putStr $ unlines errMess
 printErrMess _ Not = pure ()
 
@@ -39,23 +38,6 @@ getHeadingsFromDir workDir _ = do
     let (errorMessages, listHeadings) =
             partitionEithers $ fmap getHeadingsFromFile textList
     pure (concat listHeadings, errorMessages)
-
-getOrgFilesFromDir :: Path Abs Dir -> IO [Path Abs File]
-getOrgFilesFromDir projectDir = filter isOrgFile . snd <$> listDir projectDir
-
-getOrgFilesFromDirRecur :: Path Abs Dir -> IO [Path Abs File]
-getOrgFilesFromDirRecur projectDir =
-    filter isOrgFile . snd <$> listDirRecur projectDir
-
-isOrgFile :: Path Abs File -> Bool
-isOrgFile file = (not . isHidden) file && fileExtension file == ".org"
-
-isHidden :: Path Abs File -> Bool
-isHidden = any startsWithDot . splitDirectories . fromAbsFile
-
-startsWithDot :: FilePath -> Bool
-startsWithDot ('.':_) = True
-startsWithDot _ = False
 
 readFileAndRememberPath :: Path Abs Dir
                         -> Path Abs File

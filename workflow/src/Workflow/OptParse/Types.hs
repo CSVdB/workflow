@@ -29,11 +29,11 @@ type Arguments = (Command, Flags)
 type Instructions = (Dispatch, Settings)
 
 newtype WaitingArgsCommand = WaitingArgsCommand
-    { cmdWorkDirPath :: Maybe String
+    { cmdWorkDirPath :: Maybe FilePath
     } deriving (Show, Eq)
 
 newtype NextArgsCommand = NextArgsCommand
-    { cmdProjectsGlob :: Maybe FilePath
+    { cmdProjectsGlob :: Maybe String
     } deriving (Show, Eq)
 
 data Command
@@ -48,7 +48,7 @@ data Flags = Flags
 
 data Configuration = Configuration
     { cfgWorkDir :: Path Abs Dir
-    , cfgProjectsGlob :: FilePath
+    , cfgProjectsGlob :: String
     , cfgShouldPrint :: ShouldPrint
     } deriving (Show, Eq)
 
@@ -65,7 +65,8 @@ data WaitingArgsDispatch = WaitingArgsDispatch
     } deriving (Show, Eq)
 
 data NextArgsDispatch = NextArgsDispatch
-    { dspProjectsGlob :: FilePath
+    { dspProjectDir :: Path Abs Dir
+    , dspProjectFiles :: [Path Abs File]
     , dspNextShouldPrint :: ShouldPrint
     } deriving (Show, Eq)
 

@@ -12,6 +12,7 @@ import Data.Configurator
 import Import hiding (lookup)
 import Options.Applicative
 import System.Environment
+import System.FilePath.Posix
 import Workflow.OptParse.Types
 
 getInstructions :: IO Instructions
@@ -25,7 +26,7 @@ getSettings _ = Settings
 
 getDispatch :: Command -> Flags -> IO Dispatch
 getDispatch cmd flags = do
-    cfg <- getConfig cmd flags
+    cfg <- getConfig flags
     getDispatchFromConfig cmd flags cfg
 
 getDispatchFromConfig :: Command -> Flags -> Configuration -> IO Dispatch
@@ -37,22 +38,21 @@ getDispatchFromConfig cmd Flags {..} Configuration {..} =
                let workDir = fromMaybe cfgWorkDir cmdWorkDir
                pure $ DispatchWaiting $ WaitingArgsDispatch workDir shouldPrint
            CommandNext args -> do
-               projectsGlob <-
-                   formatProjectsGlob $
+               (projectDir, projectFiles) <-
+                   getProjectFilesFromProjectsGlob $
                    fromMaybe cfgProjectsGlob $ cmdProjectsGlob args
-               pure $ DispatchNext $ NextArgsDispatch projectsGlob shouldPrint
+               pure $
+                   DispatchNext $
+                   NextArgsDispatch projectDir projectFiles shouldPrint
 
-getConfig :: Command -> Flags -> IO Configuration
-getConfig _ flg = do
+getConfig :: Flags -> IO Configuration
+getConfig flg = do
     cfgPath <- getConfigPathFromFlags flg
     config <- load [Optional $ toFilePath cfgPath]
     workDirPath <- fromMaybe defaultWorkDirPath <$> lookup config "workDir"
     workDir <- formatWorkDirPath workDirPath
     projectsGlob <-
-        do unformattedProjectsGlob <-
-               fromMaybe (defaultProjectsGlob workDirPath) <$>
-               lookup config "projects"
-           formatProjectsGlob unformattedProjectsGlob
+        fromMaybe (defaultProjectsGlob workDirPath) <$> lookup config "projects"
     shouldPrint <- fromMaybe defaultShouldPrint <$> lookup config "shouldPrint"
     pure $ Configuration workDir projectsGlob shouldPrint
 
@@ -60,7 +60,7 @@ defaultWorkDirPath :: FilePath
 defaultWorkDirPath = "~/workflow"
 
 defaultProjectsGlob :: FilePath -> FilePath
-defaultProjectsGlob workDir = workDir ++ "/projects"
+defaultProjectsGlob workDir = workDir ++ "/projects/*"
 
 getConfigPathFromFlags :: Flags -> IO (Path Abs File)
 getConfigPathFromFlags Flags {..} =
@@ -72,25 +72,52 @@ formatWorkDirPath dirPathString =
         '~':'/':_ -> do
             home <- getHomeDir
             resolveDir home $ drop 2 dirPathString
-        '~':_ -> do
-            home <- getHomeDir
-            resolveDir home $ init dirPathString
-        '/':_ -> parseAbsDir dirPathString
         _ -> resolveDir' dirPathString
 
-formatProjectsGlob :: String -> IO String
-formatProjectsGlob projectsGlob =
+getProjectFilesFromProjectsGlob :: String -> IO (Path Abs Dir, [Path Abs File])
+getProjectFilesFromProjectsGlob projectsGlob = do
+    projectsGlobFormattedStart <- formatBeginningProjectsGlob projectsGlob
+    case (take 2 . reverse) projectsGlobFormattedStart of
+        "**" -> do
+            projectDir <- parseAbsDir projectsGlobFormattedStart
+            files <- getOrgFilesFromDirRecur projectDir
+            pure (projectDir, files)
+        '*':_ -> do
+            projectDir <- parseAbsDir $ init projectsGlobFormattedStart
+            files <- getOrgFilesFromDir projectDir
+            pure (projectDir, files)
+        _ -> do
+            projectDir <- parseAbsDir projectsGlobFormattedStart
+            files <- getOrgFilesFromDir projectDir
+            pure (projectDir, files)
+
+formatBeginningProjectsGlob :: String -> IO String
+formatBeginningProjectsGlob projectsGlob =
     case projectsGlob of
         '~':'/':_ -> do
             home <- getHomeDir
             pure $ fromAbsDir home ++ drop 2 projectsGlob
-        '~':_ -> do
-            home <- getHomeDir
-            pure $ fromAbsDir home ++ init projectsGlob
         '/':_ -> pure projectsGlob
         _ -> do
             currentDir <- getCurrentDir
             pure $ fromAbsDir currentDir ++ projectsGlob
+
+getOrgFilesFromDir :: Path Abs Dir -> IO [Path Abs File]
+getOrgFilesFromDir projectDir = filter isOrgFile . snd <$> listDir projectDir
+
+getOrgFilesFromDirRecur :: Path Abs Dir -> IO [Path Abs File]
+getOrgFilesFromDirRecur projectDir =
+    filter isOrgFile . snd <$> listDirRecur projectDir
+
+isOrgFile :: Path Abs File -> Bool
+isOrgFile file = (not . isHidden) file && fileExtension file == ".org"
+
+isHidden :: Path Abs File -> Bool
+isHidden = any startsWithDot . splitDirectories . fromAbsFile
+
+startsWithDot :: FilePath -> Bool
+startsWithDot ('.':_) = True
+startsWithDot _ = False
 
 defaultConfigFile :: IO (Path Abs File)
 defaultConfigFile = do
@@ -157,13 +184,15 @@ workflowDirParser =
              , metavar "FILEPATH"
              ])
 
-projectsGlobParser :: Parser (Maybe FilePath)
+projectsGlobParser :: Parser (Maybe String)
 projectsGlobParser =
     option
         (Just <$> str)
         (mconcat
-             [ long "project-dir"
-             , help "Give the path to the project directory to be used"
+             [ long "project-glob"
+             , help $
+               "Give the path to the project directory to be used" ++
+               " plus a ** or * determining whether orgfiles should be extracted recursively resp. directly"
              , value Nothing
              , metavar "FILEPATH"
              ])
