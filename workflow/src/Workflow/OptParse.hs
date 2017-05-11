@@ -9,7 +9,10 @@ module Workflow.OptParse
     ) where
 
 import Data.Configurator
+import Data.Text (Text)
 import Import hiding (lookup)
+import Network.CGI.Protocol
+import Network.Mail.Mime
 import Options.Applicative
 import System.Environment
 import System.FilePath.Posix
@@ -44,6 +47,18 @@ getDispatchFromConfig cmd Flags {..} Configuration {..} =
                pure $
                    DispatchNext $
                    NextArgsDispatch projectDir projectFiles shouldPrint
+           CommandRem args -> do
+               cmdWorkDir <-
+                   mapM formatWorkDirPath $ cmdWorkDirPath $ cmdWaitArgs args
+               let workDir = fromMaybe cfgWorkDir cmdWorkDir
+               let maxDays = fromMaybe cfgMaxDays $ cmdMaxDays args
+               let fromAddress = Address Nothing cfgFromAddress
+               pure $
+                   DispatchRem $
+                   RemArgsDispatch
+                       (WaitingArgsDispatch workDir shouldPrint)
+                       maxDays
+                       fromAddress
 
 getConfig :: Flags -> IO Configuration
 getConfig flg = do
@@ -54,13 +69,24 @@ getConfig flg = do
     projectsGlob <-
         fromMaybe (defaultProjectsGlob workDirPath) <$> lookup config "projects"
     shouldPrint <- fromMaybe defaultShouldPrint <$> lookup config "shouldPrint"
-    pure $ Configuration workDir projectsGlob shouldPrint
+    maxDays <- fromMaybe defaultMaxDays <$> lookup config "maxDays"
+    maybeFromAddress <- lookup config "fromAddress"
+    case maybeFromAddress of
+        Nothing ->
+            die
+                "The config file doesn't contain an address to send emails from."
+        Just fromAddress ->
+            pure $
+            Configuration workDir projectsGlob shouldPrint maxDays fromAddress
 
 defaultWorkDirPath :: FilePath
 defaultWorkDirPath = "~/workflow"
 
 defaultProjectsGlob :: FilePath -> FilePath
 defaultProjectsGlob workDir = workDir ++ "/projects/*"
+
+defaultMaxDays :: Int
+defaultMaxDays = 7
 
 getConfigPathFromFlags :: Flags -> IO (Path Abs File)
 getConfigPathFromFlags Flags {..} =
@@ -156,7 +182,10 @@ parseCommand :: Parser Command
 parseCommand =
     hsubparser $
     mconcat
-        [command "waiting" parseCommandWaiting, command "next" parseCommandNext]
+        [ command "waiting" parseCommandWaiting
+        , command "next" parseCommandNext
+        , command "reminders" parseCommandRem
+        ]
 
 parseCommandWaiting :: ParserInfo Command
 parseCommandWaiting = info parser modifier
@@ -172,6 +201,16 @@ parseCommandNext = info parser modifier
         progDesc
             "Print the next actions and warn when a file does not have one."
     parser = CommandNext . NextArgsCommand <$> projectsGlobParser
+
+parseCommandRem :: ParserInfo Command
+parseCommandRem = info parser modifier
+  where
+    modifier = fullDesc <> progDesc "Print a list of the \"waiting\" tasks"
+    parser =
+        CommandRem <$>
+        (RemArgsCommand <$> (WaitingArgsCommand <$> workflowDirParser) <*>
+         maxDaysParser <*>
+         fromAddressParser)
 
 workflowDirParser :: Parser (Maybe FilePath)
 workflowDirParser =
@@ -219,6 +258,30 @@ shouldPrintParser =
              , showDefault
              , value Nothing
              , metavar "shouldPrint"
+             ])
+
+maxDaysParser :: Parser (Maybe Int)
+maxDaysParser =
+    option
+        (Just <$> maybeReader maybeRead)
+        (mconcat
+             [ long "max-days"
+             , help "The max # days of waiting before a reminder can be sent."
+             , showDefault
+             , value Nothing
+             , metavar "INT"
+             ])
+
+fromAddressParser :: Parser (Maybe Text)
+fromAddressParser =
+    option
+        (Just <$> maybeReader maybeRead)
+        (mconcat
+             [ long "from-address"
+             , help "The address from which the email will be sent."
+             , showDefault
+             , value Nothing
+             , metavar "STRING"
              ])
 
 parseFlags :: Parser Flags

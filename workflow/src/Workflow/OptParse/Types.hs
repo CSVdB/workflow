@@ -6,7 +6,9 @@ module Workflow.OptParse.Types where
 
 import Data.Configurator.Types
 import qualified Data.Text as T
+import Data.Text (Text)
 import Import
+import Network.Mail.Mime
 
 data ShouldPrint
     = Error
@@ -36,9 +38,16 @@ newtype NextArgsCommand = NextArgsCommand
     { cmdProjectsGlob :: Maybe String
     } deriving (Show, Eq)
 
+data RemArgsCommand = RemArgsCommand
+    { cmdWaitArgs :: WaitingArgsCommand
+    , cmdMaxDays :: Maybe Int
+    , cmdFromAddress :: Maybe Text
+    } deriving (Show, Eq)
+
 data Command
     = CommandWaiting WaitingArgsCommand
     | CommandNext NextArgsCommand
+    | CommandRem RemArgsCommand
     deriving (Show, Eq)
 
 data Flags = Flags
@@ -50,6 +59,8 @@ data Configuration = Configuration
     { cfgWorkDir :: Path Abs Dir
     , cfgProjectsGlob :: String
     , cfgShouldPrint :: ShouldPrint
+    , cfgMaxDays :: Int
+    , cfgFromAddress :: Text
     } deriving (Show, Eq)
 
 data Settings =
@@ -60,7 +71,7 @@ defaultShouldPrint :: ShouldPrint
 defaultShouldPrint = Warning
 
 data WaitingArgsDispatch = WaitingArgsDispatch
-    { dspWworkDir :: Path Abs Dir
+    { dspWorkDir :: Path Abs Dir
     , dspWaitingShouldPrint :: ShouldPrint
     } deriving (Show, Eq)
 
@@ -70,7 +81,14 @@ data NextArgsDispatch = NextArgsDispatch
     , dspNextShouldPrint :: ShouldPrint
     } deriving (Show, Eq)
 
+data RemArgsDispatch = RemArgsDispatch
+    { dspWaitArgs :: WaitingArgsDispatch
+    , maxDays :: Int
+    , dspFromAddress :: Address
+    } deriving (Show, Eq)
+
 data Dispatch
     = DispatchWaiting WaitingArgsDispatch
     | DispatchNext NextArgsDispatch
+    | DispatchRem RemArgsDispatch
     deriving (Show, Eq)

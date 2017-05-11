@@ -2,6 +2,7 @@ module Import
     ( module X
     ) where
 
+import Control.Monad as X
 import Data.Either as X
 import Data.List as X
 import Data.Maybe as X

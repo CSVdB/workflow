@@ -65,12 +65,14 @@ waitingTaskToStrings timezone currentTime WaitingTask {..} =
     in case date of
            Nothing -> [file, "WAITING " ++ description, ""]
            Just realDate ->
-               let currentUTCTime = localTimeToUTC timezone currentTime
-                   realUTCTime = localTimeToUTC timezone realDate
-                   nOfDays =
-                       (floor $
-                        diffUTCTime currentUTCTime realUTCTime / nominalDay) :: Int
+               let nOfDays = getDaysDifference timezone currentTime realDate
                in [file, "WAITING " ++ description, show nOfDays ++ " days"]
+
+getDaysDifference :: TimeZone -> LocalTime -> LocalTime -> Int
+getDaysDifference timezone time1 time2 =
+    let utcTime1 = localTimeToUTC timezone time1
+        utcTime2 = localTimeToUTC timezone time2
+    in floor $ diffUTCTime utcTime1 utcTime2 / nominalDay
 
 data WaitingTask = WaitingTask
     { date :: Maybe LocalTime
