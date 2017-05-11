@@ -42,6 +42,7 @@ data RemArgsCommand = RemArgsCommand
     { cmdWaitArgs :: WaitingArgsCommand
     , cmdMaxDays :: Maybe Int
     , cmdFromAddress :: Maybe Text
+    , cmdMailSenderName :: Maybe String
     } deriving (Show, Eq)
 
 data Command
@@ -56,11 +57,12 @@ data Flags = Flags
     } deriving (Show, Eq)
 
 data Configuration = Configuration
-    { cfgWorkDir :: Path Abs Dir
-    , cfgProjectsGlob :: String
-    , cfgShouldPrint :: ShouldPrint
-    , cfgMaxDays :: Int
-    , cfgFromAddress :: Text
+    { cfgWorkDir :: Maybe FilePath
+    , cfgProjectsGlob :: Maybe String
+    , cfgShouldPrint :: Maybe ShouldPrint
+    , cfgMaxDays :: Maybe Int
+    , cfgFromAddress :: Maybe Text
+    , cfgMailSenderName :: Maybe String
     } deriving (Show, Eq)
 
 data Settings =
