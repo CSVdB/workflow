@@ -14,12 +14,16 @@ import Data.Time.Clock
 import Data.Time.Format
 import Data.Time.LocalTime
 import Import
+import System.IO
 import Text.PrettyPrint.Boxes
 import Workflow.OptParse
 
 printErrMess :: [String] -> ShouldPrint -> IO ()
-printErrMess [] Error = pure ()
-printErrMess errMess Error = die $ init $ init $ unlines errMess
+printErrMess [] _ = pure ()
+printErrMess errMess Error =
+    case reverse $ unlines errMess of
+        _:_:reverseErrMess -> die $ reverse reverseErrMess
+        _ -> pure ()
 printErrMess errMess Warning = putStr $ unlines errMess
 printErrMess _ Not = pure ()
 
@@ -100,3 +104,31 @@ getDocument content =
                 , "STARTED"
                 ]
     in parseOnly parser content :: Either String Document
+
+data YesNo
+    = Yes
+    | No
+    deriving (Show, Eq)
+
+question
+    :: YesNo -- ^ Default answer
+    -> String -- ^ Question, add the questionmark yourself.
+    -> IO YesNo
+question defaultAnswer questionStr = do
+    answer <- prompt (unwords [questionStr, ynSign defaultAnswer])
+    pure $
+        case (defaultAnswer, answer) of
+            (Yes, "n") -> No
+            (Yes, _) -> Yes
+            (No, "y") -> Yes
+            (No, _) -> No
+
+ynSign :: YesNo -> String
+ynSign Yes = "[Y/n]"
+ynSign No = "[y/N]"
+
+prompt :: String -> IO String
+prompt p = do
+    putStr $ p ++ " > "
+    hFlush stdout
+    getLine
