@@ -1,10 +1,22 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Workflow where
 
-import Introduction
-
-import Workflow.Types
-
+import Import
+import Workflow.Next
 import Workflow.OptParse
+import Workflow.Reminders
+import Workflow.Waiting
 
 workflow :: IO ()
-workflow = putStrLn "hi"
+workflow = do
+    (disp, sett) <- getInstructions
+    execute disp sett
+
+execute :: Dispatch -> Settings -> IO ()
+execute (DispatchWaiting WaitingArgsDispatch {..}) =
+    waiting dspWorkDir dspWaitingShouldPrint
+execute (DispatchNext NextArgsDispatch {..}) =
+    next dspProjectDir dspProjectFiles dspNextShouldPrint
+execute (DispatchRem (RemArgsDispatch WaitingArgsDispatch {..} maxDays fromAddress)) =
+    reminders maxDays dspWorkDir fromAddress dspWaitingShouldPrint
