@@ -14,9 +14,14 @@ import Data.Time.Clock
 import Data.Time.Format
 import Data.Time.LocalTime
 import Import
-import System.FilePath.Posix
 import Text.PrettyPrint.Boxes
 import Workflow.OptParse
+
+printErrMess :: [String] -> ShouldPrint -> IO ()
+printErrMess [] Error = pure ()
+printErrMess errMess Error = die $ init $ init $ unlines errMess
+printErrMess errMess Warning = putStr $ unlines errMess
+printErrMess _ Not = pure ()
 
 formatStringAsTable :: [[String]] -> String
 formatStringAsTable list =
@@ -26,26 +31,13 @@ formatStringAsTable list =
 
 getHeadingsFromDir :: Path Abs Dir
                    -> Settings
-                   -> IO ([(Heading, Path Rel File)], String)
+                   -> IO ([(Heading, Path Rel File)], [String])
 getHeadingsFromDir workDir _ = do
-    files <- getFilesFromDir workDir
+    files <- getOrgFilesFromDirRecur workDir
     textList <- mapM (readFileAndRememberPath workDir) files
     let (errorMessages, listHeadings) =
             partitionEithers $ fmap getHeadingsFromFile textList
-    pure (concat listHeadings, unlines errorMessages)
-
-getFilesFromDir :: Path Abs Dir -> IO [Path Abs File]
-getFilesFromDir workPath = do
-    (_, files) <- listDirRecur workPath
-    let endsInOrg file = ".org" == fileExtension file
-    pure $ filter (not . isHidden) $ filter endsInOrg files
-
-isHidden :: Path Abs File -> Bool
-isHidden = any startsWithDot . splitDirectories . fromAbsFile
-
-startsWithDot :: FilePath -> Bool
-startsWithDot ('.':_) = True
-startsWithDot _ = False
+    pure (concat listHeadings, errorMessages)
 
 readFileAndRememberPath :: Path Abs Dir
                         -> Path Abs File

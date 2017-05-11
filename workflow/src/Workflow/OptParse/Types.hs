@@ -6,7 +6,7 @@ module Workflow.OptParse.Types where
 
 import Data.Configurator.Types
 import qualified Data.Text as T
-import Introduction
+import Import
 
 data ShouldPrint
     = Error
@@ -17,6 +17,7 @@ data ShouldPrint
 getShouldPrint :: String -> Maybe ShouldPrint
 getShouldPrint "error" = Just Error
 getShouldPrint "nothing" = Just Not
+getShouldPrint "warning" = Just Warning
 getShouldPrint _ = Nothing
 
 instance Configured ShouldPrint where
@@ -27,19 +28,28 @@ type Arguments = (Command, Flags)
 
 type Instructions = (Dispatch, Settings)
 
-data Command = CommandWaiting
-    { workDirCommand :: Maybe FilePath
-    , configFile :: Maybe FilePath
-    , shouldPrint :: ShouldPrint
+newtype WaitingArgsCommand = WaitingArgsCommand
+    { cmdWorkDirPath :: Maybe FilePath
     } deriving (Show, Eq)
 
-data Flags =
-    Flags
+newtype NextArgsCommand = NextArgsCommand
+    { cmdProjectsGlob :: Maybe String
+    } deriving (Show, Eq)
+
+data Command
+    = CommandWaiting WaitingArgsCommand
+    | CommandNext NextArgsCommand
     deriving (Show, Eq)
 
+data Flags = Flags
+    { flagsConfigFile :: Maybe FilePath
+    , flagsShouldPrint :: Maybe ShouldPrint
+    } deriving (Show, Eq)
+
 data Configuration = Configuration
-    { workDirConfig :: FilePath
-    , shouldPrintConfig :: ShouldPrint
+    { cfgWorkDir :: Path Abs Dir
+    , cfgProjectsGlob :: String
+    , cfgShouldPrint :: ShouldPrint
     } deriving (Show, Eq)
 
 data Settings =
@@ -49,7 +59,18 @@ data Settings =
 defaultShouldPrint :: ShouldPrint
 defaultShouldPrint = Warning
 
-data Dispatch = DispatchWaiting
-    { workDir :: Path Abs Dir
-    , shouldPrintDispatch :: ShouldPrint
+data WaitingArgsDispatch = WaitingArgsDispatch
+    { dspWworkDir :: Path Abs Dir
+    , dspWaitingShouldPrint :: ShouldPrint
     } deriving (Show, Eq)
+
+data NextArgsDispatch = NextArgsDispatch
+    { dspProjectDir :: Path Abs Dir
+    , dspProjectFiles :: [Path Abs File]
+    , dspNextShouldPrint :: ShouldPrint
+    } deriving (Show, Eq)
+
+data Dispatch
+    = DispatchWaiting WaitingArgsDispatch
+    | DispatchNext NextArgsDispatch
+    deriving (Show, Eq)
