@@ -1,0 +1,171 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE FlexibleContexts #-}
+
+module Workflow.Reminders where
+
+<<<<<<< 690219597cb39938b81dc690ba9dcb4b1bc4c74b
+import Data.ByteString.Lazy as LBS hiding (concat)
+import Data.HashMap.Strict
+=======
+import qualified Data.ByteString.Lazy as LB hiding (concat)
+import qualified Data.HashMap.Strict as HM
+>>>>>>> Added the feature "reminders".
+import Data.OrgMode.Parse
+import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Text.Encoding
+import Data.Time.LocalTime
+<<<<<<< 690219597cb39938b81dc690ba9dcb4b1bc4c74b
+import Import hiding (lookup)
+=======
+import Import
+>>>>>>> Added the feature "reminders".
+import Network.CGI.Protocol
+import Network.Mail.Mime
+import Workflow.OptParse
+import Workflow.Utils
+import Workflow.Waiting
+
+reminders :: Int -> Path Abs Dir -> Address -> ShouldPrint -> Settings -> IO ()
+reminders maxDays workDir fromAddress shouldPrint settings = do
+    (headings, errMess) <- getWaitingHeadings workDir settings
+    printErrMess errMess shouldPrint
+    mapM_ (sendReminderIfNeeded shouldPrint maxDays fromAddress) headings
+
+sendReminderIfNeeded :: ShouldPrint
+                     -> Int
+                     -> Address
+                     -> (Heading, Path Rel File)
+                     -> IO ()
+sendReminderIfNeeded shouldPrint globalMaxDays fromAddress (heading@Heading {..}, orgfile) = do
+    let headingProperties = getHeadingPropertiesFromHeading heading
+    let maxDays = fromMaybe globalMaxDays $ headingMaxDays headingProperties
+    timezone <- getCurrentTimeZone
+    currentLocalTime <- zonedTimeToLocalTime <$> getZonedTime
+<<<<<<< 690219597cb39938b81dc690ba9dcb4b1bc4c74b
+    case ageOfTask timezone currentLocalTime (heading, orgfile) of
+=======
+    case ageOfTaskInDays timezone currentLocalTime (heading, orgfile) of
+>>>>>>> Added the feature "reminders".
+        Left errMess -> printErrMess (lines errMess) shouldPrint
+        Right daysAgo ->
+            case headingReceiver headingProperties of
+                Nothing -> pure ()
+<<<<<<< 690219597cb39938b81dc690ba9dcb4b1bc4c74b
+                Just toEmailAddress ->
+                    when (daysAgo < maxDays) $ do
+                        let mail =
+                                createEmail
+                                    (heading, orgfile)
+                                    toEmailAddress
+                                    fromAddress
+                        print $ mailToText mail
+                        shouldSendReminder <- askToSendReminder
+                        when shouldSendReminder $ sendReminder mail
+=======
+                Just toAddress ->
+                    when (daysAgo >= maxDays) $ do
+                        let mail = createEmail heading fromAddress toAddress
+                        putStr . T.unpack $ mailToText mail
+                        shouldSendReminder <-
+                            question No "Do you want to send this email?"
+                        when (shouldSendReminder == Yes) $ sendReminder mail
+>>>>>>> Added the feature "reminders".
+
+sendReminder :: Mail -> IO ()
+sendReminder = renderSendMail
+
+<<<<<<< 690219597cb39938b81dc690ba9dcb4b1bc4c74b
+-- https://hackage.haskell.org/package/mime-mail-0.4.11/docs/Network-Mail-Mime.html#t:Mail
+ageOfTask :: TimeZone
+          -> LocalTime
+          -> (Heading, Path Rel File)
+          -> Either String Int
+ageOfTask timezone currentLocalTime (heading@Heading {..}, orgfile) =
+=======
+ageOfTaskInDays :: TimeZone
+                -> LocalTime
+                -> (Heading, Path Rel File)
+                -> Either String Int
+ageOfTaskInDays timezone currentLocalTime (heading@Heading {..}, orgfile) =
+>>>>>>> Added the feature "reminders".
+    let maybeDate = getDate heading
+    in case maybeDate of
+           Nothing ->
+               Left $
+               "The following waiting-task has no date:" ++
+<<<<<<< 690219597cb39938b81dc690ba9dcb4b1bc4c74b
+               " " ++ fromRelFile orgfile ++ " " ++ T.unpack title
+=======
+               " \"" ++ T.unpack title ++ "\" in " ++ fromRelFile orgfile
+>>>>>>> Added the feature "reminders".
+           Just localTimeDate ->
+               Right $ getDaysDifference timezone currentLocalTime localTimeDate
+
+data HeadingProperties = HeadingProperties
+    { headingReceiver :: Maybe Address
+    , headingMaxDays :: Maybe Int
+    } deriving (Show, Eq)
+
+<<<<<<< 690219597cb39938b81dc690ba9dcb4b1bc4c74b
+getHeadingPropertiesFromHeading :: Heading -> HeadingProperties
+getHeadingPropertiesFromHeading Heading {..} =
+    let hashMap = sectionProperties section
+        receiver = Address Nothing <$> lookup "emailAddress" hashMap
+        maxDays = join $ maybeRead . T.unpack <$> lookup "maxDays" hashMap
+    in HeadingProperties receiver maxDays
+
+createEmail :: (Heading, Path Rel File) -> Address -> Address -> Mail
+createEmail _ _ _ = undefined
+
+-- Use simpleMail'
+-- https://hackage.haskell.org/package/mime-mail-0.4.11/docs/Network-Mail-Mime.html#t:Address
+=======
+propertyEmailAddressName :: [Text]
+propertyEmailAddressName = ["emailAddress", "email"]
+
+propertyMaxDaysName :: Text
+propertyMaxDaysName = "maxDays"
+
+getHeadingPropertiesFromHeading :: Heading -> HeadingProperties
+getHeadingPropertiesFromHeading Heading {..} =
+    let hashMap = sectionProperties section
+        receiver =
+            Address Nothing <$>
+            msum (map (`HM.lookup` hashMap) propertyEmailAddressName)
+        maxDays =
+            join $
+            maybeRead . T.unpack <$> HM.lookup propertyMaxDaysName hashMap
+    in HeadingProperties receiver maxDays
+
+createEmail :: Heading -> Address -> Address -> Mail
+createEmail Heading {..} fromAddress toAddress =
+    let subject = "reminder"
+        body = "This is a reminder email."
+    in simpleMail' toAddress fromAddress subject body
+
+>>>>>>> Added the feature "reminders".
+mailToText :: Mail -> Text
+mailToText mail =
+    T.unlines $
+    [ "Do you want to send the following email?"
+    , T.append "From: " $ addressEmail (mailFrom mail)
+    , T.append "To: " $ T.unwords (addressEmail <$> mailTo mail)
+    , T.append "Subject: " $ T.concat (snd <$> mailHeaders mail)
+<<<<<<< 690219597cb39938b81dc690ba9dcb4b1bc4c74b
+=======
+    , "Body:"
+>>>>>>> Added the feature "reminders".
+    ] ++
+    fmap partToText (concat $ mailParts mail)
+
+partToText :: Part -> Text
+<<<<<<< 690219597cb39938b81dc690ba9dcb4b1bc4c74b
+partToText Part {..} = decodeUtf8 $ toStrict partContent
+
+askToSendReminder :: IO Bool
+askToSendReminder = undefined
+=======
+partToText Part {..} = decodeUtf8 $ LB.toStrict partContent
+>>>>>>> Added the feature "reminders".
