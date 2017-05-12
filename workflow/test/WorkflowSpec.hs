@@ -2,6 +2,7 @@
 
 module WorkflowSpec where
 
+import Data.Dates
 import qualified Data.HashMap.Strict as HM
 import Data.OrgMode.Parse
 import Data.Text (Text)
@@ -9,7 +10,7 @@ import qualified Data.Text as T
 import Data.Time.Calendar
 import Data.Time.Format
 import Data.Time.LocalTime
-import Import hiding (insert)
+import Import
 import Network.Mail.Mime
 import Test.Hspec
 import Workflow.Next
@@ -21,17 +22,18 @@ import Workflow.Waiting
 findWorkDir :: IO (Path Abs Dir)
 findWorkDir = resolveDir' "../test_resources/workflow"
 
-getCurrentLocalTime :: IO LocalTime
-getCurrentLocalTime = zonedTimeToLocalTime <$> getZonedTime
-
-getCurrentTimeHeadingFromTime :: LocalTime -> Heading
-getCurrentTimeHeadingFromTime localTime =
-    let dateString =
-            show (localDay localTime) ++
-            " Sat " ++
-            formatTime defaultTimeLocale "%R" (localTimeOfDay localTime)
+getCurrentTimeHeadingFromTime :: ZonedTime -> Heading
+getCurrentTimeHeadingFromTime zonedTime =
+    let localTime = zonedTimeToLocalTime zonedTime
+        weekDay = dateWeekDay . dayToDateTime $ localDay localTime
+        dateString =
+            unwords
+                [ show (localDay localTime)
+                , take 3 $ show weekDay
+                , formatTime defaultTimeLocale "%R" (localTimeOfDay localTime)
+                ]
         hashmap =
-            case propertyEmailAddressName of
+            case propertyEmailAddressNames of
                 key:_ ->
                     HM.insert key emailAddress $
                     HM.singleton propertyMaxDaysName "5"
@@ -50,8 +52,11 @@ getCurrentTimeHeadingFromTime localTime =
              , sectionProperties = hashmap
              , sectionParagraph =
                    T.pack $
-                   "    - State \"WAITING\"    from \"TODO\"       [" ++
-                   dateString ++ "]\n"
+                   concat
+                       [ "    - State \"WAITING\"    from \"TODO\"       ["
+                       , dateString
+                       , "]\n"
+                       ]
              }
        , subHeadings = []
        }
@@ -61,24 +66,22 @@ getCurrentTimeHeading = do
     workDir <- resolveDir' "test_resources/currentTime"
     filePath <- resolveFile workDir $ T.unpack currentOrgFile
     file <- stripDir workDir filePath
-    currentLocalTime <- getCurrentLocalTime
-    pure (getCurrentTimeHeadingFromTime currentLocalTime, file)
+    currentZonedTime <- getZonedTime
+    pure (getCurrentTimeHeadingFromTime currentZonedTime, file)
 
 currentOrgFile :: Text
 currentOrgFile = "currentTime.org"
 
 getWaitingTasksAsString :: IO String
 getWaitingTasksAsString =
-    let day = fromGregorian 2017 04 27
-        time =
-            LocalTime
-            { localDay = day
-            , localTimeOfDay = TimeOfDay {todHour = 0, todMin = 0, todSec = 1}
-            }
+    let timeLocalDay = fromGregorian 2017 04 27
+        timeLocalTimeOfDay = TimeOfDay {todHour = 0, todMin = 0, todSec = 1}
+        time = LocalTime timeLocalDay timeLocalTimeOfDay
     in do timezone <- getCurrentTimeZone
           workflowPath <- findWorkDir
           (waitingHeadings, _) <- getWaitingHeadings workflowPath Settings
-          pure $ waitingHeadingsToString timezone time waitingHeadings
+          pure $
+              waitingHeadingsToString (ZonedTime time timezone) waitingHeadings
 
 getNextTasks :: IO (String, [[String]])
 getNextTasks = do
@@ -156,9 +159,8 @@ spec =
         describe "ageOfTaskInDays" $
             it "Can find the age of tasks in number of days correctly" $ do
                 heading <- getCurrentTimeHeading
-                timezone <- getCurrentTimeZone
-                currentLocalTime <- getCurrentLocalTime
-                let nOfDays = ageOfTaskInDays timezone currentLocalTime heading
+                currentZonedTime <- getZonedTime
+                let nOfDays = ageOfTaskInDays currentZonedTime heading
                 nOfDays `shouldBe` Right 0
         describe "headingProperties" $
             it "Can read out the properties of a Heading" $ do
@@ -169,7 +171,7 @@ spec =
                     (headingProperties /=
                      HeadingProperties (Just address) (Just taskMaxDays)) $
                     expectationFailure
-                        "'propertyEmailAddressName' might be an empty list."
+                        "'propertyEmailAddressNames' might be an empty list."
         describe "dealWithMails" $
             it "Can create an email and transform it into Text" $ do
                 heading <- getCurrentTimeHeading

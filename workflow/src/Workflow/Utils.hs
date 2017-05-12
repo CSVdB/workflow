@@ -19,7 +19,6 @@ import Text.PrettyPrint.Boxes
 import Workflow.OptParse
 
 printErrMess :: [String] -> ShouldPrint -> IO ()
-printErrMess [] _ = pure ()
 printErrMess errMess Error =
     case reverse $ unlines errMess of
         _:_:reverseErrMess -> die $ reverse reverseErrMess

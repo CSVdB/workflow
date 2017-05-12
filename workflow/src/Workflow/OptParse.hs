@@ -42,30 +42,25 @@ getDispatchFromConfig cmd Flags {..} Configuration {..} =
     in case cmd of
            CommandWaiting args -> do
                let workDirPath =
-                       fromMaybe (fromMaybe defaultWorkDirPath cfgWorkDir) $
-                       cmdWorkDirPath args
-               workDir <- formatWorkDirPath workDirPath
-               pure $ DispatchWaiting $ WaitingArgsDispatch workDir shouldPrint
+                       fromMaybe defaultWorkDirPath $
+                       mplus (cmdWorkDirPath args) cfgWorkDir
+               DispatchWaiting . (`WaitingArgsDispatch` shouldPrint) <$>
+                   formatWorkDirPath workDirPath
            CommandNext args -> do
                (projectDir, projectFiles) <-
                    getProjectFilesFromProjectsGlob $
-                   fromMaybe
-                       (fromMaybe
-                            (defaultProjectsGlob defaultWorkDirPath)
-                            cfgProjectsGlob) $
-                   cmdProjectsGlob args
+                   fromMaybe (defaultProjectsGlob defaultWorkDirPath) $
+                   mplus (cmdProjectsGlob args) cfgProjectsGlob
                pure $
                    DispatchNext $
                    NextArgsDispatch projectDir projectFiles shouldPrint
            CommandRem RemArgsCommand {..} -> do
                let workDirPath =
-                       fromMaybe (fromMaybe defaultWorkDirPath cfgWorkDir) $
-                       cmdWorkDirPath cmdWaitArgs
+                       fromMaybe defaultWorkDirPath $
+                       mplus (cmdWorkDirPath cmdWaitArgs) cfgWorkDir
                workDir <- formatWorkDirPath workDirPath
                let maxDays =
-                       fromMaybe
-                           (fromMaybe defaultMaxDays cfgMaxDays)
-                           cmdMaxDays
+                       fromMaybe defaultMaxDays $ mplus cmdMaxDays cfgMaxDays
                fromEmailAddress <-
                    case cmdFromAddress of
                        Just text -> pure text
@@ -75,26 +70,22 @@ getDispatchFromConfig cmd Flags {..} Configuration {..} =
                                Nothing -> die "No email address was given!"
                let fromName =
                        T.pack <$> mplus cmdMailSenderName cfgMailSenderName
-               let fromAddress = Address fromName fromEmailAddress
                pure $
                    DispatchRem $
                    RemArgsDispatch
                        (WaitingArgsDispatch workDir shouldPrint)
-                       maxDays
-                       fromAddress
+                       maxDays $
+                   Address fromName fromEmailAddress
 
 getConfig :: Flags -> IO Configuration
 getConfig flg = do
     cfgPath <- getConfigPathFromFlags flg
     config <- load [Optional $ toFilePath cfgPath]
-    workDir <- lookup config "workDir"
-    projectsGlob <- lookup config "projects"
-    shouldPrint <- lookup config "shouldPrint"
-    maxDays <- lookup config "maxDays"
-    fromAddress <- lookup config "fromAddress"
-    name <- lookup config "name"
-    pure $
-        Configuration workDir projectsGlob shouldPrint maxDays fromAddress name
+    Configuration <$> lookup config "workDir" <*> lookup config "projects" <*>
+        lookup config "shouldPrint" <*>
+        lookup config "maxDays" <*>
+        lookup config "fromAddress" <*>
+        lookup config "name"
 
 defaultWorkDirPath :: FilePath
 defaultWorkDirPath = "~/workflow"
@@ -123,16 +114,13 @@ getProjectFilesFromProjectsGlob projectsGlob = do
     case reverse projectsGlobFormattedStart of
         '*':'*':reverseProjectGlob -> do
             projectDir <- parseAbsDir $ reverse reverseProjectGlob
-            files <- getOrgFilesFromDirRecur projectDir
-            pure (projectDir, files)
+            (,) projectDir <$> getOrgFilesFromDirRecur projectDir
         '*':reverseProjectGlob -> do
             projectDir <- parseAbsDir $ reverse reverseProjectGlob
-            files <- getOrgFilesFromDir projectDir
-            pure (projectDir, files)
+            (,) projectDir <$> getOrgFilesFromDir projectDir
         _ -> do
             projectDir <- parseAbsDir projectsGlobFormattedStart
-            files <- getOrgFilesFromDir projectDir
-            pure (projectDir, files)
+            (,) projectDir <$> getOrgFilesFromDir projectDir
 
 formatBeginningProjectsGlob :: String -> IO String
 formatBeginningProjectsGlob projectsGlob =
@@ -251,7 +239,7 @@ projectsGlobParser =
                "Give the path to the project directory to be used" ++
                " plus a ** or * determining whether orgfiles should be extracted recursively resp. directly"
              , value Nothing
-             , metavar "STRING"
+             , metavar "GLOB"
              ])
 
 configFileParser :: Parser (Maybe FilePath)

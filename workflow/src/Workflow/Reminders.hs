@@ -4,7 +4,7 @@
 
 module Workflow.Reminders where
 
-import qualified Data.ByteString.Lazy as LB hiding (concat)
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.HashMap.Strict as HM
 import Data.OrgMode.Parse
 import Data.Text (Text)
@@ -32,9 +32,8 @@ sendReminderIfNeeded :: ShouldPrint
 sendReminderIfNeeded shouldPrint globalMaxDays fromAddress (heading@Heading {..}, orgfile) = do
     let headingProperties = getHeadingPropertiesFromHeading heading
     let maxDays = fromMaybe globalMaxDays $ headingMaxDays headingProperties
-    timezone <- getCurrentTimeZone
-    currentLocalTime <- zonedTimeToLocalTime <$> getZonedTime
-    case ageOfTaskInDays timezone currentLocalTime (heading, orgfile) of
+    currentZonedTime <- getZonedTime
+    case ageOfTaskInDays currentZonedTime (heading, orgfile) of
         Left errMess -> printErrMess (lines errMess) shouldPrint
         Right daysAgo ->
             case headingReceiver headingProperties of
@@ -45,16 +44,10 @@ sendReminderIfNeeded shouldPrint globalMaxDays fromAddress (heading@Heading {..}
                         putStr . T.unpack $ mailToText mail
                         shouldSendReminder <-
                             question No "Do you want to send this email?"
-                        when (shouldSendReminder == Yes) $ sendReminder mail
+                        when (shouldSendReminder == Yes) $ renderSendMail mail
 
-sendReminder :: Mail -> IO ()
-sendReminder = renderSendMail
-
-ageOfTaskInDays :: TimeZone
-                -> LocalTime
-                -> (Heading, Path Rel File)
-                -> Either String Int
-ageOfTaskInDays timezone currentLocalTime (heading@Heading {..}, orgfile) =
+ageOfTaskInDays :: ZonedTime -> (Heading, Path Rel File) -> Either String Int
+ageOfTaskInDays zonedTime (heading@Heading {..}, orgfile) =
     let maybeDate = getDate heading
     in case maybeDate of
            Nothing ->
@@ -62,15 +55,15 @@ ageOfTaskInDays timezone currentLocalTime (heading@Heading {..}, orgfile) =
                "The following waiting-task has no date:" ++
                " \"" ++ T.unpack title ++ "\" in " ++ fromRelFile orgfile
            Just localTimeDate ->
-               Right $ getDaysDifference timezone currentLocalTime localTimeDate
+               Right $ getDaysDifference zonedTime localTimeDate
 
 data HeadingProperties = HeadingProperties
     { headingReceiver :: Maybe Address
     , headingMaxDays :: Maybe Int
     } deriving (Show, Eq)
 
-propertyEmailAddressName :: [Text]
-propertyEmailAddressName = ["emailAddress", "email"]
+propertyEmailAddressNames :: [Text]
+propertyEmailAddressNames = ["emailAddress", "email"]
 
 propertyMaxDaysName :: Text
 propertyMaxDaysName = "maxDays"
@@ -80,7 +73,7 @@ getHeadingPropertiesFromHeading Heading {..} =
     let hashMap = sectionProperties section
         receiver =
             Address Nothing <$>
-            msum (map (`HM.lookup` hashMap) propertyEmailAddressName)
+            msum (map (`HM.lookup` hashMap) propertyEmailAddressNames)
         maxDays =
             join $
             maybeRead . T.unpack <$> HM.lookup propertyMaxDaysName hashMap
