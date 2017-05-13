@@ -65,7 +65,7 @@ waitingTaskToStrings zonedTime WaitingTask {..} =
 getDaysDifference :: ZonedTime -> LocalTime -> Int
 getDaysDifference zonedTime time =
     let timezone = zonedTimeZone zonedTime
-        utcTime1 = localTimeToUTC timezone $ zonedTimeToLocalTime zonedTime
+        utcTime1 = zonedTimeToUTC zonedTime
         utcTime2 = localTimeToUTC timezone time
     in floor $ diffUTCTime utcTime1 utcTime2 / nominalDay
 
