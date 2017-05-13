@@ -5,6 +5,7 @@ module Workflow where
 import Import
 import Workflow.Next
 import Workflow.OptParse
+import Workflow.Reminders
 import Workflow.Waiting
 
 workflow :: IO ()
@@ -14,6 +15,8 @@ workflow = do
 
 execute :: Dispatch -> Settings -> IO ()
 execute (DispatchWaiting WaitingArgsDispatch {..}) =
-    waiting dspWworkDir dspWaitingShouldPrint
+    waiting dspWorkDir dspWaitingShouldPrint
 execute (DispatchNext NextArgsDispatch {..}) =
     next dspProjectDir dspProjectFiles dspNextShouldPrint
+execute (DispatchRem (RemArgsDispatch WaitingArgsDispatch {..} maxDays fromAddress)) =
+    reminders maxDays dspWorkDir fromAddress dspWaitingShouldPrint

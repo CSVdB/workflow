@@ -22,10 +22,8 @@ waiting workDir shouldPrint settings = do
     putStr string
 
 headingsToString :: [(Heading, Path Rel File)] -> IO String
-headingsToString waitingHeadings = do
-    currentTime <- zonedTimeToLocalTime <$> getZonedTime
-    timezone <- getCurrentTimeZone
-    pure $ waitingHeadingsToString timezone currentTime waitingHeadings
+headingsToString waitingHeadings =
+    (`waitingHeadingsToString` waitingHeadings) <$> getZonedTime
 
 getWaitingHeadings :: Path Abs Dir
                    -> Settings
@@ -34,16 +32,12 @@ getWaitingHeadings workDir sett = do
     (headings, errMess) <- getHeadingsFromDir workDir sett
     pure (filter (isWaiting . fst) headings, errMess)
 
-waitingHeadingsToString :: TimeZone
-                        -> LocalTime
-                        -> [(Heading, Path Rel File)]
-                        -> String
-waitingHeadingsToString timezone currentTime waitingHeadings =
+waitingHeadingsToString :: ZonedTime -> [(Heading, Path Rel File)] -> String
+waitingHeadingsToString zonedTime waitingHeadings =
     let tasks =
             sortBy ordenWaitingTasks $
             catMaybes $ fmap toWaitingTask waitingHeadings
-    in formatStringAsTable $
-       fmap (waitingTaskToStrings timezone currentTime) tasks
+    in formatStringAsTable $ fmap (waitingTaskToStrings zonedTime) tasks
 
 ordenWaitingTasks :: WaitingTask -> WaitingTask -> Ordering
 ordenWaitingTasks task1 task2 =
@@ -59,18 +53,21 @@ isWaiting :: Heading -> Bool
 isWaiting Heading {..} =
     keyword == Just StateKeyword {unStateKeyword = "WAITING"}
 
-waitingTaskToStrings :: TimeZone -> LocalTime -> WaitingTask -> [String]
-waitingTaskToStrings timezone currentTime WaitingTask {..} =
+waitingTaskToStrings :: ZonedTime -> WaitingTask -> [String]
+waitingTaskToStrings zonedTime WaitingTask {..} =
     let file = fromRelFile orgFile
     in case date of
            Nothing -> [file, "WAITING " ++ description, ""]
            Just realDate ->
-               let currentUTCTime = localTimeToUTC timezone currentTime
-                   realUTCTime = localTimeToUTC timezone realDate
-                   nOfDays =
-                       (floor $
-                        diffUTCTime currentUTCTime realUTCTime / nominalDay) :: Int
+               let nOfDays = getDaysDifference zonedTime realDate
                in [file, "WAITING " ++ description, show nOfDays ++ " days"]
+
+getDaysDifference :: ZonedTime -> LocalTime -> Int
+getDaysDifference zonedTime time =
+    let timezone = zonedTimeZone zonedTime
+        utcTime1 = zonedTimeToUTC zonedTime
+        utcTime2 = localTimeToUTC timezone time
+    in floor $ diffUTCTime utcTime1 utcTime2 / nominalDay
 
 data WaitingTask = WaitingTask
     { date :: Maybe LocalTime
