@@ -2,7 +2,6 @@
 
 module WorkflowSpec where
 
-import Data.Dates
 import qualified Data.HashMap.Strict as HM
 import Data.OrgMode.Parse
 import Data.Text (Text)
@@ -25,13 +24,7 @@ findWorkDir = resolveDir' "../test_resources/workflow"
 getCurrentTimeHeadingFromTime :: ZonedTime -> Heading
 getCurrentTimeHeadingFromTime zonedTime =
     let localTime = zonedTimeToLocalTime zonedTime
-        weekDay = dateWeekDay . dayToDateTime $ localDay localTime
-        dateString =
-            unwords
-                [ show (localDay localTime)
-                , take 3 $ show weekDay
-                , formatTime defaultTimeLocale "%R" (localTimeOfDay localTime)
-                ]
+        dateString = formatTime defaultTimeLocale "%F %a %R" localTime
         hashmap =
             case propertyEmailAddressNames of
                 key:_ ->
