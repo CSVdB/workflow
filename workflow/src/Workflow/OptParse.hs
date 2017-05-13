@@ -67,7 +67,9 @@ getDispatchFromConfig cmd Flags {..} Configuration {..} =
                        Nothing ->
                            case cfgFromAddress of
                                Just text -> pure text
-                               Nothing -> die "No email address was given!"
+                               Nothing ->
+                                   die
+                                       "Write in the config-file \"fromAddress = <senderMailAddress>\" and \"name = <senderName>\""
                let fromName =
                        T.pack <$> mplus cmdMailSenderName cfgMailSenderName
                pure $
