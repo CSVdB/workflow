@@ -1,0 +1,24 @@
+* An org-file for testing the workflow executable
+** done tasks
+*** DONE a waiting task which is done now
+    CLOSED: [2017-03-23 Thu 18:46]
+    - State "DONE"       from "WAITING"    [2017-03-23 Thu 18:46] 
+** waiting tasks
+*** WAITING a waiting task
+    SCHEDULED: <2017-03-27 Mon>
+    - State "WAITING"    from "TODO"       [2017-03-24 Sat 18:28]
+*** WAITING an older waiting task
+    - State "WAITING"    from "TODO"       [2017-02-24 Sat 18:28]
+*** WAITING a waiting task without date
+*** WAITING waiting task with an email address
+    SCHEDULED: <2017-05-12 Fri>                                                        
+    :PROPERTIES:                                                                       
+    :email:    nick.van.den.broeck@hotmail.com                                         
+    :maxDays:  5                                                                       
+    :name:     Nick Van den Broeck                                                     
+    :END:                                                                              
+    - State "WAITING"    from "TODO"       [2017-05-05 Fri 13:39]
+    ** next tasks
+*** NEXT a next task
+** todo tasks
+*** TODO a todo task

@@ -4,11 +4,11 @@ cabal-version: >=1.10
 build-type: Simple
 license: AllRightsReserved
 license-file: LICENSE
-copyright: Copyright: (c) 2016 Tom Sydney Kerckhove
+copyright: Copyright: (c) 2017 Tom Sydney Kerckhove
 maintainer: syd.kerckhove@gmail.com
 homepage: http://cs-syd.eu
 category: CsSyd
-author: Tom Sydney Kerckhove
+author: Tom Sydney Kerckhove and Nick Van den Broeck
 
 library
     exposed-modules:
@@ -16,19 +16,39 @@ library
         Workflow.Types
         Workflow.OptParse
         Workflow.OptParse.Types
+        Workflow.Waiting
+        Workflow.Next
+        Workflow.Utils
+        Workflow.Reminders
+        Import
     build-depends:
-        base >=4.9 && <=5,
+        base >=4.9 && <5,
         introduction -any,
-        optparse-applicative >=0.13
+        optparse-applicative -any,
+        orgmode-parse >=0.1 && <0.2,
+        time >=1.6 && <1.7,
+        text >=1.2 && <1.3,
+        filepath >=1.4 && <1.5,
+        configurator >=0.3 && <0.4,
+        path >=0.4 && <0.6,
+        path-io >=1.2 && <1.3,
+        text-time >=0.2 && <0.3,
+        bytestring -any,
+        attoparsec >=0.13 && <0.14,
+        boxes >=0.1 && <0.2,
+        cgi >=3001.3 && <3001.4,
+        mime-mail >=0.4.13 && <0.4.14,
+        bytestring >=0.10 && <0.11,
+        unordered-containers >=0.2.8 && <0.2.9
     default-language: Haskell2010
     default-extensions: NoImplicitPrelude
     hs-source-dirs: src/
     ghc-options: -Wall
 
-executable workflow
+executable wf
     main-is: Main.hs
     build-depends:
-        base >=4.9 && <=5,
+        base >=4.9 && <5,
         workflow -any
     default-language: Haskell2010
     hs-source-dirs: app/
@@ -38,10 +58,30 @@ test-suite workflow-test
     type: exitcode-stdio-1.0
     main-is: Spec.hs
     build-depends:
-        base >=4.9 && <=5,
+        base >=4.9 && <5,
         workflow -any,
-        hspec -any
+        introduction -any,
+        optparse-applicative -any,
+        orgmode-parse >=0.1,
+        time >=1.6,
+        text >=1.2,
+        filepath >=1.4,
+        configurator >=0.2,
+        path >=0.3,
+        path-io >=1.2,
+        bytestring -any,
+        attoparsec >=0.13,
+        hspec -any,
+        HUnit >=1.5,
+        boxes >=0.1,
+        mime-mail >=0.4.13 && <0.4.14,
+        directory >=1.3 && <1.4,
+        hashtables >=1.2 && <1.3,
+        unordered-containers >=0.2.8 && <0.2.9,
+        dates >=0.2 && <0.3
     default-language: Haskell2010
     default-extensions: NoImplicitPrelude
     hs-source-dirs: test/
+    other-modules:
+        WorkflowSpec
     ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall
