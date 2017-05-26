@@ -261,10 +261,10 @@ spec = do
     describe "resolveStringToFiles" $
         it "finds the appropriate, existing files given a FilePath" $ do
             files <- getReminderTestFiles
-            fromAbsFile <$>
+            fromRelFile . filename <$>
                 files `shouldBe`
-                [ "/home/nick/Syd/workflow/test_resources/reminders/test.header"
-                , "/home/nick/Syd/workflow/test_resources/reminders/test.txt"
+                [ "test.header"
+                , "test.txt"
                 ]
     describe "templateToMailTemplate" $
         it "generate the MailTemplate" $ do
