@@ -18,5 +18,5 @@ execute (DispatchWaiting WaitingArgsDispatch {..}) =
     waiting dspWorkDir dspWaitingShouldPrint
 execute (DispatchNext NextArgsDispatch {..}) =
     next dspProjectDir dspProjectFiles dspNextShouldPrint
-execute (DispatchRem (RemArgsDispatch WaitingArgsDispatch {..} maxDays fromAddress)) =
-    reminders maxDays dspWorkDir fromAddress dspWaitingShouldPrint
+execute (DispatchRem (RemArgsDispatch WaitingArgsDispatch {..} maxDays fromAddress mailTemplate)) =
+    reminders maxDays dspWorkDir fromAddress dspWaitingShouldPrint mailTemplate

@@ -36,50 +36,124 @@ getDispatch cmd flags = do
 getDispatchFromConfig :: Command -> Flags -> Configuration -> IO Dispatch
 getDispatchFromConfig cmd Flags {..} Configuration {..} =
     let shouldPrint =
-            fromMaybe
-                (fromMaybe defaultShouldPrint cfgShouldPrint)
-                flagsShouldPrint
+            fromMaybe (fromMaybe dftShouldPrint cfgShouldPrint) flagsShouldPrint
     in case cmd of
            CommandWaiting args -> do
                let workDirPath =
-                       fromMaybe defaultWorkDirPath $
+                       fromMaybe dftWorkDirPath $
                        mplus (cmdWorkDirPath args) cfgWorkDir
                DispatchWaiting . (`WaitingArgsDispatch` shouldPrint) <$>
                    formatWorkDirPath workDirPath
            CommandNext args -> do
                (projectDir, projectFiles) <-
                    getProjectFilesFromProjectsGlob $
-                   fromMaybe (defaultProjectsGlob defaultWorkDirPath) $
+                   fromMaybe (dftProjectsGlob dftWorkDirPath) $
                    mplus (cmdProjectsGlob args) cfgProjectsGlob
                pure $
                    DispatchNext $
                    NextArgsDispatch projectDir projectFiles shouldPrint
            CommandRem RemArgsCommand {..} -> do
                let workDirPath =
-                       fromMaybe defaultWorkDirPath $
+                       fromMaybe dftWorkDirPath $
                        mplus (cmdWorkDirPath cmdWaitArgs) cfgWorkDir
                workDir <- formatWorkDirPath workDirPath
-               let maxDays =
-                       fromMaybe defaultMaxDays $ mplus cmdMaxDays cfgMaxDays
+               let maxDays = fromMaybe dftMaxDays $ mplus cmdMaxDays cfgMaxDays
                fromEmailAddress <-
                    case cmdFromAddress of
                        Just text -> pure text
                        Nothing ->
                            case cfgFromAddress of
                                Just text -> pure text
-                               Nothing -> die $
-                                   "No email address was given to send emails from."
-                                   ++ "Add it to the config file by using "
-                                   ++ "\"fromAddress = user@example.com\" and "
-                                   ++ "\"name = user\"."
+                               Nothing ->
+                                   die $
+                                   "No email address was given to send emails from." ++
+                                   "Add it to the config file by using " ++
+                                   "\"fromAddress = user@example.com\" and " ++
+                                   "\"name = user\"."
                let fromName =
                        T.pack <$> mplus cmdMailSenderName cfgMailSenderName
-               pure $
-                   DispatchRem $
-                   RemArgsDispatch
-                       (WaitingArgsDispatch workDir shouldPrint)
-                       maxDays $
-                   Address fromName fromEmailAddress
+               let templateMaybe = mplus cmdTemplateFile cfgTemplateFile
+               template <-
+                   case templateMaybe of
+                       Nothing -> die "No global template was given."
+                       Just list -> pure list
+               mailTemplate <-
+                   templateToMailTemplate <$> resolveStringToFiles template
+               case mailTemplate of
+                   Left errMess -> die errMess
+                   Right temp ->
+                       pure $
+                       DispatchRem $
+                       RemArgsDispatch
+                           (WaitingArgsDispatch workDir shouldPrint)
+                           maxDays
+                           (Address fromName fromEmailAddress)
+                           temp
+
+templateToMailTemplate :: [Path Abs File] -> Either String MailTemplate
+templateToMailTemplate files =
+    let headerFileEither =
+            case getFilesWithExtension ".header" files of
+                Nothing ->
+                    Left "The global template has no or multiple header files."
+                Just file -> Right file
+        plainFileMaybe = getFilesWithExtension ".txt" files
+        htmlFileMaybe = getFilesWithExtension ".html" files
+        filesWithExtension =
+            case (plainFileMaybe, htmlFileMaybe) of
+                (Nothing, Nothing) ->
+                    Left
+                        "The global template contains either no or multiple html and plain files."
+                (Just file, Nothing) ->
+                    Right (FileWithExtension Plain file, Nothing)
+                (Nothing, Just file) ->
+                    Right (FileWithExtension Html file, Nothing)
+                (Just plainFile, Just htmlFile) ->
+                    Right
+                        ( FileWithExtension Plain plainFile
+                        , Just $ FileWithExtension Html htmlFile)
+    in case (headerFileEither, filesWithExtension) of
+           (Right headerFile, Right (file1, file2)) ->
+               Right $ MailTemplate headerFile file1 file2
+           (Left headerErr, Right _) -> Left headerErr
+           (Right _, Left filesErr) -> Left filesErr
+           (Left headerErr, Left filesErr) ->
+               Left $ unlines [headerErr, filesErr]
+
+getFilesWithExtension :: Text -> [Path Abs File] -> Maybe (Path Abs File)
+getFilesWithExtension ext list =
+    case filter (extensionIs ext) list of
+        x:_ -> Just x
+        _ -> Nothing
+
+extensionIs :: Text -> Path Abs File -> Bool
+extensionIs ext file = ext == T.pack (fileExtension file)
+
+resolveStringToFiles :: FilePath -> IO [Path Abs File]
+resolveStringToFiles path = do
+    templatesDir <- getTemplatesDir
+    files <-
+        case path of
+            '/':_ ->
+                mapM
+                    (parseAbsFile . addExtension path)
+                    [".header", ".txt", ".html"]
+            _ ->
+                let addExt dir relPath extension =
+                        ((dir Import.</>) <$>
+                         parseRelFile (addExtension relPath extension))
+                in mapM (addExt templatesDir path) [".header", ".txt", ".html"]
+    let fileToListIfExists file = do
+            exists <- doesFileExist file
+            if exists
+                then pure [file]
+                else pure []
+    concat <$> mapM fileToListIfExists files
+
+getTemplatesDir :: IO (Path Abs Dir)
+getTemplatesDir = do
+    homeDir <- getHomeDir
+    resolveDir homeDir ".wf/reminder-templates/"
 
 getConfig :: Flags -> IO Configuration
 getConfig flg = do
@@ -89,20 +163,21 @@ getConfig flg = do
         lookup config "shouldPrint" <*>
         lookup config "maxDays" <*>
         lookup config "fromAddress" <*>
-        lookup config "name"
+        lookup config "name" <*>
+        lookup config "templateFile"
 
-defaultWorkDirPath :: FilePath
-defaultWorkDirPath = "~/workflow"
+dftWorkDirPath :: FilePath
+dftWorkDirPath = "~/workflow"
 
-defaultProjectsGlob :: FilePath -> FilePath
-defaultProjectsGlob workDir = workDir ++ "/projects/*"
+dftProjectsGlob :: FilePath -> FilePath
+dftProjectsGlob workDir = workDir ++ "/projects/*"
 
-defaultMaxDays :: Int
-defaultMaxDays = 7
+dftMaxDays :: Int
+dftMaxDays = 7
 
 getConfigPathFromFlags :: Flags -> IO (Path Abs File)
 getConfigPathFromFlags Flags {..} =
-    fromMaybe defaultConfigFile $ resolveFile' <$> flagsConfigFile
+    fromMaybe dftConfigFile $ resolveFile' <$> flagsConfigFile
 
 formatWorkDirPath :: String -> IO (Path Abs Dir)
 formatWorkDirPath dirPathString =
@@ -154,8 +229,8 @@ startsWithDot :: FilePath -> Bool
 startsWithDot ('.':_) = True
 startsWithDot _ = False
 
-defaultConfigFile :: IO (Path Abs File)
-defaultConfigFile = do
+dftConfigFile :: IO (Path Abs File)
+dftConfigFile = do
     homeDir <- getHomeDir
     resolveFile homeDir ".wfrc"
 
@@ -220,7 +295,8 @@ parseCommandRem = info parser modifier
         (RemArgsCommand <$> (WaitingArgsCommand <$> workflowDirParser) <*>
          maxDaysParser <*>
          fromAddressParser <*>
-         mailSenderNameParser)
+         mailSenderNameParser <*>
+         templateFileParser)
 
 workflowDirParser :: Parser (Maybe FilePath)
 workflowDirParser =
@@ -301,6 +377,18 @@ mailSenderNameParser =
         (mconcat
              [ long "mail-sender-name"
              , help "Full name of the sender of emails"
+             , value Nothing
+             , metavar "STRING"
+             ])
+
+templateFileParser :: Parser (Maybe String)
+templateFileParser =
+    option
+        (Just <$> str)
+        (mconcat
+             [ long "template-mail-file"
+             , help
+                   "Give \"file\" to use the global mail template in \"/home/user/.wf/reminder-templates/file.(header/txt/html)\" or the absolute path without extension."
              , value Nothing
              , metavar "STRING"
              ])

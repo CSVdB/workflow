@@ -10,4 +10,6 @@ extra-deps:
 - validity-path-0.1.0.1
 - text-time-0.2.0
 - dates-0.2.2.1
+- mustache-2.2.3
+- aeson-1.2.0.0
 resolver: lts-8.11

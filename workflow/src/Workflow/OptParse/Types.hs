@@ -16,6 +16,28 @@ data ShouldPrint
     | Not
     deriving (Show, Eq)
 
+data Extension
+    = Plain
+    | Html
+    deriving (Show, Eq)
+
+data FileWithExtension = FileWithExtension
+    { ext :: Extension
+    , file :: Path Abs File
+    } deriving (Show, Eq)
+
+data MailTemplate = MailTemplate
+    { headerFile :: Path Abs File
+    , bodyFile :: FileWithExtension
+    , altBodyFile :: Maybe FileWithExtension
+    } deriving (Show, Eq)
+
+data MustachedMailTemplate = MustachedMailTemplate
+    { mustachedHeaderFile :: Path Abs File
+    , body :: (Extension, Text)
+    , altBody :: Maybe (Extension, Text)
+    } deriving (Show, Eq)
+
 getShouldPrint :: String -> Maybe ShouldPrint
 getShouldPrint "error" = Just Error
 getShouldPrint "nothing" = Just Not
@@ -43,6 +65,7 @@ data RemArgsCommand = RemArgsCommand
     , cmdMaxDays :: Maybe Int
     , cmdFromAddress :: Maybe Text
     , cmdMailSenderName :: Maybe String
+    , cmdTemplateFile :: Maybe FilePath
     } deriving (Show, Eq)
 
 data Command
@@ -63,14 +86,15 @@ data Configuration = Configuration
     , cfgMaxDays :: Maybe Int
     , cfgFromAddress :: Maybe Text
     , cfgMailSenderName :: Maybe String
+    , cfgTemplateFile :: Maybe FilePath
     } deriving (Show, Eq)
 
 data Settings =
     Settings
     deriving (Show, Eq)
 
-defaultShouldPrint :: ShouldPrint
-defaultShouldPrint = Warning
+dftShouldPrint :: ShouldPrint
+dftShouldPrint = Warning
 
 data WaitingArgsDispatch = WaitingArgsDispatch
     { dspWorkDir :: Path Abs Dir
@@ -87,6 +111,7 @@ data RemArgsDispatch = RemArgsDispatch
     { dspWaitArgs :: WaitingArgsDispatch
     , maxDays :: Int
     , dspFromAddress :: Address
+    , dspTemplate :: MailTemplate
     } deriving (Show, Eq)
 
 data Dispatch
