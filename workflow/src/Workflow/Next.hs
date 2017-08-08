@@ -4,6 +4,7 @@
 module Workflow.Next where
 
 import Data.OrgMode.Parse
+import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import Import
@@ -23,19 +24,20 @@ pathToTableOfNexts :: Path Abs Dir
                    -> IO (Either String [[String]])
 pathToTableOfNexts workDir filePath = do
     content <- T.readFile $ toFilePath filePath
-    case getDocument content of
-        Left errMess -> pure $ Left errMess
-        Right doc -> do
-            fileName <- stripDir workDir filePath
-            pure $ docToNextTasksStrings fileName doc
+    fileName <- stripDir workDir filePath
+    pure $ docToNextTasksStrings fileName content
 
-docToNextTasksStrings :: Path Rel File -> Document -> Either String [[String]]
-docToNextTasksStrings path doc =
-    let headings = docToHeading doc
-    in case filter isNext headings of
-           [] -> Left $ fromRelFile path ++ " has no next task!"
-           list ->
-               Right $ nextHeadingToStrings path <$> filter shouldBePrinted list
+docToNextTasksStrings :: Path Rel File -> Text -> Either String [[String]]
+docToNextTasksStrings path content =
+    case getDocument content of
+        Left errMess -> Left errMess
+        Right doc ->
+            let headings = docToHeading doc
+            in case filter isNext headings of
+                   [] -> Left $ fromRelFile path ++ " has no next task!"
+                   list ->
+                       Right $
+                       nextHeadingToStrings path <$> filter shouldBePrinted list
 
 isNext :: Heading -> Bool
 isNext Heading {..} =

@@ -8,8 +8,8 @@ module Workflow.Reminders where
 
 import Control.Arrow
 import qualified Data.ByteString.Lazy as LB
-import Data.Configurator
-import qualified Data.HashMap.Lazy as LHM
+import qualified Data.Configurator as C
+import Data.Either.Utils
 import qualified Data.HashMap.Strict as HM
 import Data.OrgMode.Parse
 import Data.Text (Text)
@@ -18,9 +18,10 @@ import Data.Text.Encoding
 import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy as LT
 import Data.Time.LocalTime
-import Import hiding (lookup)
+import Import
 import Network.CGI.Protocol
 import Network.Mail.Mime
+import Text.Email.Validate
 import Text.Mustache
 import Text.Mustache.Types
 import Text.Parsec.Error
@@ -28,19 +29,16 @@ import Workflow.OptParse
 import Workflow.Utils
 import Workflow.Waiting
 
-reminders
-    :: Int
-    -> Path Abs Dir
-    -> Address
-    -> ShouldPrint
-    -> MailTemplate
-    -> Settings
-    -> IO ()
-reminders maxDays workDir fromAddress shouldPrint mailTemplate settings = do
-    (headings, errMess) <- getWaitingHeadings workDir settings
-    printErrMess errMess shouldPrint
+reminders :: RemSets -> Settings -> IO ()
+reminders RemSets {..} settings = do
+    (headings, errMess) <- getWaitingHeadings workDirSets settings
+    printErrMess errMess shouldPrintSets
     mapM_
-        (sendReminderIfNeeded shouldPrint maxDays fromAddress mailTemplate)
+        (sendReminderIfNeeded
+             shouldPrintSets
+             maxDaysSets
+             fromAddressSets
+             mailTemplateSets)
         headings
 
 sendReminderIfNeeded
@@ -68,9 +66,7 @@ sendReminderIfNeeded shouldPrint globalMaxDays fromAddress globalMailTemplate (h
                                     Left _ -> globalMailTemplate
                                     Right x -> x
                 let subject = "Reminder email"
-                let mustacheMaybe =
-                        getMustache fromAddress subject headingProperties
-                case mustacheMaybe of
+                case getMustache fromAddress subject headingProperties of
                     Nothing ->
                         printErrMess
                             ["Mustaching " ++ fromRelFile orgfile ++ " failed"]
@@ -86,10 +82,8 @@ sendReminderIfNeeded shouldPrint globalMaxDays fromAddress globalMailTemplate (h
                                 case mailEither of
                                     Left errMess ->
                                         printErrMess (lines errMess) shouldPrint
-                                    Right mail
-                                        -- destroyFiles mustacheTemplate
-                                     -> do
-                                        putStr . T.unpack $ mailToText mail
+                                    Right mail -> do
+                                        putStr $ mailToString mail
                                         shouldSendReminder <-
                                             question
                                                 No
@@ -153,13 +147,9 @@ getHeadingProperties Heading {..} =
         templateFile =
             T.unpack <$> msum (map (`HM.lookup` hashMap) propertyTemplate)
         receivers = msum $ map (`HM.lookup` hashMap) propertyReceivers
-        cc = maybeTextToText . msum $ map (`HM.lookup` hashMap) propertyCc
-        bcc = maybeTextToText . msum $ map (`HM.lookup` hashMap) propertyBcc
+        cc = fromMaybe "" . msum $ map (`HM.lookup` hashMap) propertyCc
+        bcc = fromMaybe "" . msum $ map (`HM.lookup` hashMap) propertyBcc
     in HeadingProperties receivers cc bcc maxDays templateFile title
-
-maybeTextToText :: Maybe Text -> Text
-maybeTextToText Nothing = ""
-maybeTextToText (Just text) = text
 
 mustacheToMailTemplate :: MailInfo
                        -> MailTemplate
@@ -173,28 +163,42 @@ mustacheToMailTemplate mustache MailTemplate {..} = do
                 resolveFile (parent headerFile) $
                 "temp" ++ fileExtension headerFile
             T.writeFile (fromAbsFile newHeaderFile) mustacheHeader
-            bodyEither <- mustacheFile mustache (file bodyFile)
+            bodyEither <- mustacheFile mustache bodyFile
             case bodyEither of
                 Left errMess -> pure $ Left errMess
-                Right body ->
+                Right body -> do
+                    bodyFileExt <-
+                        case getExtension bodyFile of
+                            Just x -> pure x
+                            Nothing ->
+                                die $
+                                fromAbsFile bodyFile ++
+                                " should have extension .txt or .html, but hasn't!"
                     case altBodyFile of
                         Nothing ->
                             pure . Right $
                             MustachedMailTemplate
                                 newHeaderFile
-                                (ext bodyFile, body)
+                                (bodyFileExt, body)
                                 Nothing
                         Just bodyFile2 -> do
                             mustacheAltBodyEither <-
-                                mustacheFile mustache $ file bodyFile2
+                                mustacheFile mustache bodyFile2
                             case mustacheAltBodyEither of
                                 Left errMess -> pure $ Left errMess
                                 Right altBody ->
                                     pure . Right $
                                     MustachedMailTemplate
                                         newHeaderFile
-                                        (ext bodyFile, body) $
-                                    Just (ext bodyFile2, altBody)
+                                        (bodyFileExt, body) $
+                                    Just altBody
+
+getExtension :: Path a File -> Maybe Extension
+getExtension path =
+    case fileExtension path of
+        ".txt" -> Just Plain
+        ".html" -> Just Html
+        _ -> Nothing
 
 mustacheFile :: MailInfo -> Path Abs File -> IO (Either [String] Text)
 mustacheFile mustache file = do
@@ -218,49 +222,61 @@ data MailInfo = MailInfo
 
 instance ToMustache MailInfo where
     toMustache MailInfo {..} =
-        let hashMap =
-                LHM.insert "to" (String to) $
-                LHM.insert "from" (String from) $
-                LHM.insert "cc" (String cc) $
-                LHM.insert "bcc" (String bcc) $
-                LHM.insert "subject" (String subject) $
-                LHM.singleton "taskTitle" (String taskTitle)
-            hashMapWithSender =
-                case parseAddress (Just from) of
+        object $
+        let sender =
+                case parseAddress from of
                     Right (Address (Just name) _) ->
-                        LHM.insert "senderName" (String name) hashMap
-                    _ -> hashMap
-            hashMapWithReceiver =
-                case parseAddresses (Just to) of
+                        ["senderName" ~> String name]
+                    _ -> []
+            receiver =
+                case parseAddresses to of
                     Right (Address (Just name) _:_) ->
-                        LHM.insert
-                            "receiverName"
-                            (String name)
-                            hashMapWithSender
-                    _ -> hashMapWithSender
-        in Object hashMapWithReceiver
+                        ["receiverName" ~> String name]
+                    _ -> []
+        in sender ++
+           receiver ++
+           [ "to" ~> String to
+           , "from" ~> String from
+           , "cc" ~> String cc
+           , "bcc" ~> String bcc
+           , "subject" ~> String subject
+           , "taskTitle" ~> String taskTitle
+           ]
 
 getBodyFromTemplate :: Extension -> MustachedMailTemplate -> Maybe Text
 getBodyFromTemplate extension MustachedMailTemplate {..} =
     if fst body == extension
         then Just $ snd body
-        else case altBody of
-                 Nothing -> Nothing
-                 Just body2 ->
-                     if fst body2 == extension
-                         then Just $ snd body2
-                         else Nothing
+        else altBody
 
 removeFileIfExists :: Path Abs File -> IO ()
-removeFileIfExists path = do
-    exists <- doesFileExist path
-    when exists $ removeFile path
+removeFileIfExists = ignoringAbsence . removeFile
 
 destroyFiles :: MailTemplate -> IO ()
 destroyFiles MailTemplate {..} = do
     removeFileIfExists headerFile
-    _ <- mapM (removeFileIfExists . file) altBodyFile
-    removeFileIfExists $ file bodyFile
+    _ <- mapM removeFileIfExists altBodyFile
+    removeFileIfExists bodyFile
+
+throwErrorIfNothingAnd :: Maybe a
+                       -> String
+                       -> (a -> Either String b)
+                       -> Either String b
+throwErrorIfNothingAnd (Just x) _ func = func x
+throwErrorIfNothingAnd Nothing errMess _ = Left errMess
+
+createErrMess :: Text -> Text -> Text -> Path Rel File -> String
+createErrMess errMess headerItem title orgfile =
+    T.unpack $
+    T.concat
+        [ errMess
+        , " for "
+        , headerItem
+        , " in task "
+        , title
+        , " in "
+        , T.pack $ fromRelFile orgfile
+        ]
 
 createEmail :: Heading
             -> Path Rel File
@@ -274,53 +290,34 @@ createEmail Heading {..} orgfile temp@MustachedMailTemplate {..} = do
             (plainPart <$> maybeToList plainBody) ++
             (htmlPart <$> maybeToList htmlBody)
     let headerFilePath = fromAbsFile mustachedHeaderFile
-    config <- load [Optional headerFilePath]
-    subjectMaybe <- lookup config "subject"
-    toAddressesMaybe <- lookup config "to"
-    fromAddressMaybe <- lookup config "from"
-    ccAddressesMaybe <- lookup config "cc"
-    bccAddressesMaybe <- lookup config "bcc"
-    case subjectMaybe of
-        Nothing ->
-            pure . Left $
-            "The template " ++ headerFilePath ++ " has no subject!"
-        Just subject ->
-            case parseAddresses toAddressesMaybe of
+    config <- C.load [C.Optional headerFilePath]
+    subjectMaybe <- C.lookup config "subject"
+    toAddressesMaybe <- C.lookup config "to"
+    fromAddressMaybe <- C.lookup config "from"
+    ccAddressesMaybe <- C.lookup config "cc"
+    bccAddressesMaybe <- C.lookup config "bcc"
+    let headerItemAbsentErr headerItem =
+            "The template " ++ headerFilePath ++ " has no " ++ headerItem
+    pure $
+        throwErrorIfNothingAnd subjectMaybe (headerItemAbsentErr "subject") $ \subject ->
+            case parseAddressesFromMaybes toAddressesMaybe of
                 Left errMess ->
-                    pure . Left . T.unpack $
-                    T.concat
-                        [ errMess
-                        , " for toAddresses in task "
-                        , title
-                        , " in "
-                        , T.pack $ fromRelFile orgfile
-                        ]
-                Right [] ->
-                    pure . Left $
-                    "The template " ++ headerFilePath ++ " has to toAddresses"
+                    Left $ createErrMess errMess "toAddresses" title orgfile
+                Right [] -> Left $ headerItemAbsentErr "toAddresses"
                 Right toAddresses ->
-                    case parseAddress fromAddressMaybe of
-                        Left "" ->
-                            pure . Left $
-                            "The template " ++
-                            headerFilePath ++ " has to fromAddress"
+                    case parseAddressFromMaybe fromAddressMaybe of
+                        Left "" -> Left $ headerItemAbsentErr "fromAddress"
                         Left errMess ->
-                            pure . Left . T.unpack $
-                            T.concat
-                                [ errMess
-                                , " for fromAddress in task "
-                                , title
-                                , " in "
-                                , T.pack $ fromRelFile orgfile
-                                ]
+                            Left $
+                            createErrMess errMess "fromAddress" title orgfile
                         Right fromAddress ->
                             let ccAddresses =
                                     eitherListToList $
-                                    parseAddresses ccAddressesMaybe
+                                    parseAddressesFromMaybes ccAddressesMaybe
                                 bccAddresses =
                                     eitherListToList $
-                                    parseAddresses bccAddressesMaybe
-                            in pure . Right $
+                                    parseAddressesFromMaybes bccAddressesMaybe
+                            in Right $
                                Mail
                                    fromAddress
                                    toAddresses
@@ -333,14 +330,6 @@ eitherListToList :: Either a [b] -> [b]
 eitherListToList (Left _) = []
 eitherListToList (Right x) = x
 
-eitherToMaybe :: Either a b -> Maybe b
-eitherToMaybe (Left _) = Nothing
-eitherToMaybe (Right x) = Just x
-
-maybeListToList :: Maybe [a] -> [a]
-maybeListToList Nothing = []
-maybeListToList (Just list) = list
-
 addressToText :: Address -> Text
 addressToText Address {..} =
     T.append
@@ -349,29 +338,26 @@ addressToText Address {..} =
              Just name -> T.append name " ") $
     T.concat ["<", addressEmail, ">"]
 
-addressesToText :: [Address] -> Text
-addressesToText addresses = T.intercalate ", " $ fmap addressToText addresses
+parseAddresses :: Text -> Either Text [Address]
+parseAddresses t =
+    let (errMess, addresses) =
+            first T.unlines $
+            partitionEithers $ parseAddress <$> T.splitOn ", " t
+    in case errMess of
+           "" -> Right addresses
+           _ -> Left errMess
 
-parseAddresses :: Maybe Text -> Either Text [Address]
-parseAddresses s =
+parseAddressesFromMaybes :: Maybe Text -> Either Text [Address]
+parseAddressesFromMaybes s =
     case s of
         Nothing -> Right []
-        Just text ->
-            let (errMess, addresses) =
-                    first T.unlines $
-                    partitionEithers $ textToAddress <$> T.splitOn ", " text
-            in case errMess of
-                   "" -> Right addresses
-                   _ -> Left errMess
+        Just text -> parseAddresses text
 
-parseAddress :: Maybe Text -> Either Text Address
-parseAddress s =
-    case s of
-        Nothing -> Left ""
-        Just string -> textToAddress string
+parseAddressFromMaybe :: Maybe Text -> Either Text Address
+parseAddressFromMaybe s = join $ parseAddress <$> maybeToEither "" s
 
-textToAddress :: Text -> Either Text Address
-textToAddress text =
+parseAddress :: Text -> Either Text Address
+parseAddress text =
     case T.splitOn " <" text of
         "":[email] ->
             case getMailAddress email of
@@ -387,29 +373,32 @@ textToAddress text =
 getMailAddress :: Text -> Maybe Text
 getMailAddress text =
     case reverse $ T.unpack text of
-        '>':reverseMail -> Just . T.pack $ reverse reverseMail
+        '>':reverseMail ->
+            decodeUtf8 <$>
+            (canonicalizeEmail . encodeUtf8 . T.pack $ reverse reverseMail)
         _ -> Nothing
 
 parseAddressErrMess :: Text
 parseAddressErrMess = "Could not parse the address"
 
 templateEitherToTemplate :: Either ParseError Template
-                         -> IO (Either [String] Template)
-templateEitherToTemplate tempEither =
-    case tempEither of
-        Left errMess -> pure . Left $ messageString <$> errorMessages errMess
-        Right template -> pure $ Right template
+                         -> Either [String] Template
+templateEitherToTemplate (Left errMess) =
+    Left $ messageString <$> errorMessages errMess
+templateEitherToTemplate (Right template) = Right template
 
 fileToTemplate :: Path Abs File -> IO (Either [String] Template)
 fileToTemplate file = do
     templateEither <-
         automaticCompile [fromAbsDir . parent $ file] $
         fromRelFile . filename $ file
-    templateEitherToTemplate templateEither
+    pure $ templateEitherToTemplate templateEither
 
-mailToText :: Mail -> Text
-mailToText mail@Mail {..} =
-    T.unlines $
+-- mailToString :: Mail -> IO String
+-- mailToString mail = T.unpack . decodeUtf8 . LB.toStrict <$> renderMail' mail
+mailToString :: Mail -> String
+mailToString mail@Mail {..} =
+    T.unpack . T.unlines $
     [ "Do you want to send the following email?"
     , T.concat ["From: ", printAddress mailFrom]
     , T.concat ["To: ", T.concat $ fmap printAddress mailTo]
@@ -434,12 +423,6 @@ bodyOfMail expectedPartType Mail {..} =
             filter (\part -> partType part == expectedPartType) $
             concat mailParts
     in decodeUtf8 $ LB.toStrict byteString
-
-maybeToText
-    :: Show a
-    => Maybe a -> Text
-maybeToText Nothing = ""
-maybeToText (Just x) = T.pack $ show x
 
 partToText :: Part -> Text
 partToText Part {..} = decodeUtf8 $ LB.toStrict partContent

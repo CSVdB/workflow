@@ -1,5 +1,6 @@
 subject = "Reminder email"
-to = "Bob <Bob@something.com>"
-from = "Alice <Alice@something.com>"
-cc = "Cynthia <Cynthia@something.com>"
-bcc = "Dieter <Dieter@something.com>"
+to = "Bob <Bob@example.com>"
+from = "Alice <Alice@example.com>"
+cc = "Cynthia <Cynthia@example.com>"
+bcc = "Dieter <Dieter@example.com>"
+

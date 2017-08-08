@@ -21,21 +21,16 @@ data Extension
     | Html
     deriving (Show, Eq)
 
-data FileWithExtension = FileWithExtension
-    { ext :: Extension
-    , file :: Path Abs File
-    } deriving (Show, Eq)
-
 data MailTemplate = MailTemplate
     { headerFile :: Path Abs File
-    , bodyFile :: FileWithExtension
-    , altBodyFile :: Maybe FileWithExtension
+    , bodyFile :: Path Abs File
+    , altBodyFile :: Maybe (Path Abs File)
     } deriving (Show, Eq)
 
 data MustachedMailTemplate = MustachedMailTemplate
     { mustachedHeaderFile :: Path Abs File
     , body :: (Extension, Text)
-    , altBody :: Maybe (Extension, Text)
+    , altBody :: Maybe Text
     } deriving (Show, Eq)
 
 getShouldPrint :: String -> Maybe ShouldPrint
@@ -112,6 +107,14 @@ data RemArgsDispatch = RemArgsDispatch
     , maxDays :: Int
     , dspFromAddress :: Address
     , dspTemplate :: MailTemplate
+    } deriving (Show, Eq)
+
+data RemSets = RemSets
+    { maxDaysSets :: Int
+    , workDirSets :: Path Abs Dir
+    , fromAddressSets :: Address
+    , shouldPrintSets :: ShouldPrint
+    , mailTemplateSets :: MailTemplate
     } deriving (Show, Eq)
 
 data Dispatch

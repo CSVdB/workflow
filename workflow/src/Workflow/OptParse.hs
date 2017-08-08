@@ -66,16 +66,20 @@ getDispatchFromConfig cmd Flags {..} Configuration {..} =
                                Just text -> pure text
                                Nothing ->
                                    die $
-                                   "No email address was given to send emails from." ++
-                                   "Add it to the config file by using " ++
-                                   "\"fromAddress = user@example.com\" and " ++
-                                   "\"name = user\"."
+                                   unlines
+                                       [ "No email address was given to send emails from."
+                                       , "Add it to the config file by using "
+                                       , "\"fromAddress = user@example.com\" and "
+                                       , "\"name = user\"."
+                                       ]
                let fromName =
                        T.pack <$> mplus cmdMailSenderName cfgMailSenderName
                let templateMaybe = mplus cmdTemplateFile cfgTemplateFile
                template <-
                    case templateMaybe of
-                       Nothing -> die "No global template was given."
+                       Nothing ->
+                           die
+                               "No global template was given. Check the README to see how to set up reminders."
                        Just list -> pure list
                mailTemplate <-
                    templateToMailTemplate <$> resolveStringToFiles template
@@ -93,62 +97,36 @@ getDispatchFromConfig cmd Flags {..} Configuration {..} =
 templateToMailTemplate :: [Path Abs File] -> Either String MailTemplate
 templateToMailTemplate files =
     let headerFileEither =
-            case getFilesWithExtension ".header" files of
+            case getFileWithExtension ".header" files of
                 Nothing ->
                     Left "The global template has no or multiple header files."
                 Just file -> Right file
-        plainFileMaybe = getFilesWithExtension ".txt" files
-        htmlFileMaybe = getFilesWithExtension ".html" files
+        plainFileMaybe = getFileWithExtension ".txt" files
+        htmlFileMaybe = getFileWithExtension ".html" files
         filesWithExtension =
             case (plainFileMaybe, htmlFileMaybe) of
                 (Nothing, Nothing) ->
                     Left
                         "The global template contains either no or multiple html and plain files."
-                (Just file, Nothing) ->
-                    Right (FileWithExtension Plain file, Nothing)
-                (Nothing, Just file) ->
-                    Right (FileWithExtension Html file, Nothing)
+                (Just file, Nothing) -> Right (file, Nothing)
+                (Nothing, Just file) -> Right (file, Nothing)
                 (Just plainFile, Just htmlFile) ->
-                    Right
-                        ( FileWithExtension Plain plainFile
-                        , Just $ FileWithExtension Html htmlFile)
-    in case (headerFileEither, filesWithExtension) of
-           (Right headerFile, Right (file1, file2)) ->
+                    Right (plainFile, Just htmlFile)
+    in case (,) <$> headerFileEither <*> filesWithExtension of
+           Left errMess -> Left errMess
+           Right (headerFile, (file1, file2)) ->
                Right $ MailTemplate headerFile file1 file2
-           (Left headerErr, Right _) -> Left headerErr
-           (Right _, Left filesErr) -> Left filesErr
-           (Left headerErr, Left filesErr) ->
-               Left $ unlines [headerErr, filesErr]
 
-getFilesWithExtension :: Text -> [Path Abs File] -> Maybe (Path Abs File)
-getFilesWithExtension ext list =
-    case filter (extensionIs ext) list of
-        x:_ -> Just x
-        _ -> Nothing
-
-extensionIs :: Text -> Path Abs File -> Bool
-extensionIs ext file = ext == T.pack (fileExtension file)
+getFileWithExtension :: Text -> [Path Abs File] -> Maybe (Path Abs File)
+getFileWithExtension ext = find ((==) ext . T.pack . fileExtension)
 
 resolveStringToFiles :: FilePath -> IO [Path Abs File]
 resolveStringToFiles path = do
     templatesDir <- getTemplatesDir
     files <-
-        case path of
-            '/':_ ->
-                mapM
-                    (parseAbsFile . addExtension path)
-                    [".header", ".txt", ".html"]
-            _ ->
-                let addExt dir relPath extension =
-                        ((dir Import.</>) <$>
-                         parseRelFile (addExtension relPath extension))
-                in mapM (addExt templatesDir path) [".header", ".txt", ".html"]
-    let fileToListIfExists file = do
-            exists <- doesFileExist file
-            if exists
-                then pure [file]
-                else pure []
-    concat <$> mapM fileToListIfExists files
+        mapM (resolveFile templatesDir) $
+        addExtension path <$> [".header", ".txt", ".html"]
+    filterM doesFileExist files
 
 getTemplatesDir :: IO (Path Abs Dir)
 getTemplatesDir = do
@@ -204,9 +182,9 @@ getProjectFilesFromProjectsGlob projectsGlob = do
 formatBeginningProjectsGlob :: String -> IO String
 formatBeginningProjectsGlob projectsGlob =
     case projectsGlob of
-        '~':'/':_ -> do
+        '~':'/':endOfProjectsGlob -> do
             home <- getHomeDir
-            pure $ fromAbsDir home ++ drop 2 projectsGlob
+            pure $ fromAbsDir home ++ endOfProjectsGlob
         '/':_ -> pure projectsGlob
         _ -> do
             currentDir <- getCurrentDir
