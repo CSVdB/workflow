@@ -36,28 +36,31 @@ getDispatch cmd flags = do
 getDispatchFromConfig :: Command -> Flags -> Configuration -> IO Dispatch
 getDispatchFromConfig cmd Flags {..} Configuration {..} =
     let shouldPrint =
-            fromMaybe (fromMaybe dftShouldPrint cfgShouldPrint) flagsShouldPrint
+            fromMaybe
+                (fromMaybe defaultShouldPrint cfgShouldPrint)
+                flagsShouldPrint
     in case cmd of
            CommandWaiting args -> do
                let workDirPath =
-                       fromMaybe dftWorkDirPath $
+                       fromMaybe defaultWorkDirPath $
                        mplus (cmdWorkDirPath args) cfgWorkDir
                DispatchWaiting . (`WaitingArgsDispatch` shouldPrint) <$>
                    formatWorkDirPath workDirPath
            CommandNext args -> do
                (projectDir, projectFiles) <-
                    getProjectFilesFromProjectsGlob $
-                   fromMaybe (dftProjectsGlob dftWorkDirPath) $
+                   fromMaybe (defaultProjectsGlob defaultWorkDirPath) $
                    mplus (cmdProjectsGlob args) cfgProjectsGlob
                pure $
                    DispatchNext $
                    NextArgsDispatch projectDir projectFiles shouldPrint
            CommandRem RemArgsCommand {..} -> do
                let workDirPath =
-                       fromMaybe dftWorkDirPath $
+                       fromMaybe defaultWorkDirPath $
                        mplus (cmdWorkDirPath cmdWaitArgs) cfgWorkDir
                workDir <- formatWorkDirPath workDirPath
-               let maxDays = fromMaybe dftMaxDays $ mplus cmdMaxDays cfgMaxDays
+               let maxDays =
+                       fromMaybe defaultMaxDays $ mplus cmdMaxDays cfgMaxDays
                fromEmailAddress <-
                    case cmdFromAddress of
                        Just text -> pure text
@@ -144,18 +147,18 @@ getConfig flg = do
         lookup config "name" <*>
         lookup config "templateFile"
 
-dftWorkDirPath :: FilePath
-dftWorkDirPath = "~/workflow"
+defaultWorkDirPath :: FilePath
+defaultWorkDirPath = "~/workflow"
 
-dftProjectsGlob :: FilePath -> FilePath
-dftProjectsGlob workDir = workDir ++ "/projects/*"
+defaultProjectsGlob :: FilePath -> FilePath
+defaultProjectsGlob workDir = workDir ++ "/projects/*"
 
-dftMaxDays :: Int
-dftMaxDays = 7
+defaultMaxDays :: Int
+defaultMaxDays = 7
 
 getConfigPathFromFlags :: Flags -> IO (Path Abs File)
 getConfigPathFromFlags Flags {..} =
-    fromMaybe dftConfigFile $ resolveFile' <$> flagsConfigFile
+    fromMaybe defaultConfigFile $ resolveFile' <$> flagsConfigFile
 
 formatWorkDirPath :: String -> IO (Path Abs Dir)
 formatWorkDirPath dirPathString =
@@ -207,8 +210,8 @@ startsWithDot :: FilePath -> Bool
 startsWithDot ('.':_) = True
 startsWithDot _ = False
 
-dftConfigFile :: IO (Path Abs File)
-dftConfigFile = do
+defaultConfigFile :: IO (Path Abs File)
+defaultConfigFile = do
     homeDir <- getHomeDir
     resolveFile homeDir ".wfrc"
 

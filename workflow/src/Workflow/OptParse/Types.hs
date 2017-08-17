@@ -88,8 +88,8 @@ data Settings =
     Settings
     deriving (Show, Eq)
 
-dftShouldPrint :: ShouldPrint
-dftShouldPrint = Warning
+defaultShouldPrint :: ShouldPrint
+defaultShouldPrint = Warning
 
 data WaitingArgsDispatch = WaitingArgsDispatch
     { dspWorkDir :: Path Abs Dir
