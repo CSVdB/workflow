@@ -14,10 +14,10 @@ workflow = do
     execute disp sett
 
 execute :: Dispatch -> Settings -> IO ()
-execute (DispatchWaiting WaitingArgsDispatch {..}) =
+execute (DispatchWaiting DispatchWaitingArgs {..}) =
     waiting dspWorkDir dspWaitingShouldPrint
-execute (DispatchNext NextArgsDispatch {..}) =
+execute (DispatchNext DispatchNextArgs {..}) =
     next dspProjectDir dspProjectFiles dspNextShouldPrint
-execute (DispatchRem (RemArgsDispatch WaitingArgsDispatch {..} maxDays fromAddress mailTemplate)) =
+execute (DispatchRem (DispatchRemArgs DispatchWaitingArgs {..} maxDays fromAddress mailTemplate)) =
     reminders $
     RemSets maxDays dspWorkDir fromAddress dspWaitingShouldPrint mailTemplate

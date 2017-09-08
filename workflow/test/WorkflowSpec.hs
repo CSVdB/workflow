@@ -219,29 +219,29 @@ templateFile = "template"
 getReminderTestFiles :: IO [Path Abs File]
 getReminderTestFiles = do
     dir <- resolveDir' "../test_resources/reminders/"
-    resolveStringToFiles $ fromAbsDir dir ++ "test"
+    getExistingPathsFromTemplateFile $ fromAbsDir dir ++ "test"
 
-getMustachedTemplate :: IO (MustachedMailTemplate, Heading, Path Rel File)
-getMustachedTemplate = do
+getMailInfodTemplate :: IO (MustachedTexts, Heading, Path Rel File)
+getMailInfodTemplate = do
     files <- getReminderTestFiles
     let zonedTime = getFixedZonedTime nDays1
     orgfile <- parseRelFile "something.org"
     let heading = getHeadingFromTime zonedTime
-    case templateToMailTemplate files of
+    case templateToTemplateFiles files of
         Left errMess ->
             die $
             unlines
-                [ "templateToMailTemplate gave the following error message:"
+                [ "templateToTemplateFiles gave the following error message:"
                 , errMess
                 ]
         Right mailTemplate ->
-            case getMustache fromAddress "Reminder email" $
+            case getMailInfo fromAddress "Reminder email" $
                  getHeadingProperties heading of
-                Nothing -> die "getMustache couldn't create a MailInfo"
+                Nothing -> die "getMailInfo couldn't create a MailInfo"
                 Just mailinfo -> do
-                    mustachedMailTemplateEither <-
-                        mustacheToMailTemplate mailinfo mailTemplate
-                    case mustachedMailTemplateEither of
+                    mustachedTemplateFilesEither <-
+                        getMustachedTexts mailinfo mailTemplate
+                    case mustachedTemplateFilesEither of
                         Left errMess -> die $ unlines errMess
                         Right mustachedTemplate ->
                             pure (mustachedTemplate, heading, orgfile)
@@ -266,17 +266,17 @@ mailInfo =
 spec :: Spec
 spec = do
     describe "waitingTasks" $
-        it "Waiting finds all WAITING tasks" $ do
+        it "Waiting finds all WAITING tasks in an example" $ do
             workflowPath <- findWorkDir
             (waitingHeadings, _) <- getWaitingHeadings workflowPath Settings
             length waitingHeadings `shouldBe` 4
     describe "waitingErrorMessages" $
-        it "Waiting generates no error messages" $ do
+        it "Waiting generates no error messages in an example" $ do
             workflowPath <- findWorkDir
             (_, errMess) <- getWaitingHeadings workflowPath Settings
             errMess `shouldBe` []
     describe "testGetDate" $
-        it "parses the date and time" $
+        it "parses the date and time in an example" $
         let nDays = nDays1
             zonedTime = getFixedZonedTime nDays
             header = getHeadingFromTime zonedTime
@@ -288,7 +288,7 @@ spec = do
                     (localDay localTime)
                     (dropSeconds $ localTimeOfDay localTime))
     describe "waitingFormatting" $
-        it "Waiting formats the output correctly" $ do
+        it "Waiting formats the output correctly in an example" $ do
             strings <- getWaitingTasksAsString
             case lines strings of
                 firstTask:_ ->
@@ -298,7 +298,7 @@ spec = do
                     expectationFailure
                         "getWaitingTasksAsString returns an empty string"
     describe "waitingHiddenFiles" $
-        it "Workflow knows to ignore hidden files" $ do
+        it "Workflow knows to ignore hidden files in an example" $ do
             dirPath <- resolveDir' "../test_resources/hiddenFiles/"
             ensureDir dirPath
             hiddenFile <- resolveFile dirPath ".iAmHidden.org"
@@ -308,12 +308,12 @@ spec = do
             files <- getOrgFilesFromDirRecur dirPath
             files `shouldBe` []
     describe "isOrgFile" $
-        it "tests isOrgFile" $ do
+        it "tests isOrgFile in an example" $ do
             dir <- resolveDir' "../test_resources/hiddenFiles/"
             file <- resolveFile dir ".iAmHidden.org"
             shouldNotSatisfy file isOrgFile
     describe "timezones" $
-        it "Workflow doesn't have a problem with timezones" $ do
+        it "Workflow doesn't have a problem with timezones in an example" $ do
             heading <- getCurrentTimeHeading
             strings <- headingsToString [heading]
             let output =
@@ -324,20 +324,20 @@ spec = do
                     expectationFailure
                         "headingsToString applied to a list of one heading returns an empty String."
     describe "nextTasks" $
-        it "finds all NEXT tasks" $ do
+        it "finds all NEXT tasks in an example" $ do
             (_, tableOfNexts) <- getNextTasks
             length tableOfNexts `shouldBe` 1
     describe "nextErrorMessages" $
-        it "Next generates the correct error messages" $ do
+        it "Next generates the correct error messages in an example" $ do
             (errMess, _) <- getNextTasks
             errMess `shouldBe` "projects/noNext.org has no next task!"
     describe "nextFormatting" $
-        it "Next formats correctly" $ do
+        it "Next formats correctly in an example" $ do
             (_, tableOfNexts) <- getNextTasks
             formatStringAsTable tableOfNexts `shouldBe`
                 "projects/test.org NEXT a next task\n"
     describe "ageOfTaskInDays" $
-        it "Can find the age of tasks in number of days correctly" $
+        it "Can find the age of tasks in number of days correctly in an example" $
         let zonedTime = getFixedZonedTime nDays1
             zonedTime2 = getFixedZonedTime nDays2
             heading = getHeadingFromTime zonedTime
@@ -345,7 +345,7 @@ spec = do
               let nOfDays = ageOfTaskInDays zonedTime2 (heading, orgfile)
               toInteger <$> nOfDays `shouldBe` Right (nDays2 - nDays1)
     describe "calculateAgeOfTask" $
-        it "Calculates the age of a task in # days" $ do
+        it "Calculates the age of a task in # days for an example" $ do
             let zonedTime = getFixedZonedTime nDays1
             let zonedTime2 = getFixedZonedTime nDays2
             orgfile <- parseRelFile "something.org"
@@ -355,34 +355,36 @@ spec = do
                         (getHeadingFromTime zonedTime, orgfile) :: Either String Int
             (toInteger <$> nOfDaysEither) `shouldBe` (Right $ nDays2 - nDays1)
     describe "getHeadingProperties using property testing" $
-        it "Extracts the HeadingProperties from a Heading" $
+        it "Extracts the HeadingProperties from a Heading for all headingInfo" $
         forAll
             generateHeadingInfo
             (\x ->
                  getHeadingProperties (getHeadingFromData x) ==
                  getHeadingPropertiesFromFunction x)
-    describe "resolveStringToFiles" $
-        it "finds the appropriate, existing files given a FilePath" $ do
+    describe "getExistingPathsFromTemplateFile" $
+        it
+            "finds the appropriate, existing files given a FilePath in an example" $ do
             files <- getReminderTestFiles
             fromRelFile . filename <$>
                 files `shouldBe` ["test.header", "test.txt"]
-    describe "templateToMailTemplate" $
-        it "generate the MailTemplate" $ do
+    describe "templateToTemplateFiles" $
+        it "generate the TemplateFiles in an example" $ do
             files <- getReminderTestFiles
             case files of
                 [header, plainFile] ->
-                    templateToMailTemplate files `shouldBe`
-                    Right (MailTemplate header plainFile Nothing)
+                    templateToTemplateFiles files `shouldBe`
+                    Right (TemplateFiles header plainFile Nothing)
                 _ ->
                     expectationFailure $
-                    "resolveStringToFiles returned files " ++ show files ++ "."
-    describe "getMustache" $
-        it "Obtains the MailInfo correctly from the heading" $ do
+                    "getExistingPathsFromTemplateFile returned files " ++
+                    show files ++ "."
+    describe "getMailInfo" $
+        it "Obtains the MailInfo correctly from the heading in an example" $ do
             headProp <- getHeadingProperties . fst <$> getCurrentTimeHeading
-            getMustache fromAddress mailSubject headProp `shouldBe`
+            getMailInfo fromAddress mailSubject headProp `shouldBe`
                 Just mailInfo
     describe "mustacheFile" $
-        it "mustache a file" $ do
+        it "mustache a file in an example" $ do
             path <- resolveFile' "../test_resources/reminders/temp.header"
             mustachedText <- mustacheFile mailInfo path
             let text =
@@ -395,15 +397,15 @@ spec = do
                         ]
             mustachedText `shouldBe` Right text
     describe "mustache" $
-        it "mustaches the MailTemplate correctly" $ do
-            (mustachedTemplate, _, _) <- getMustachedTemplate
+        it "mustaches the TemplateFiles correctly in an example" $ do
+            (mustachedTemplate, _, _) <- getMailInfodTemplate
             headerFileContent <-
                 T.readFile $ fromAbsFile $ mustachedHeaderFile mustachedTemplate
             headerFileContent `shouldBe`
                 "subject = \"Reminder email\"\nto = \"Bob <Bob@example.com>\"\nfrom = \"Alice <Alice@example.com>\"\ncc = \"Cynthia <Cynthia@example.com>\"\nbcc = \"Dieter <Dieter@example.com>\"\n\n"
     describe "dealWithMails" $
-        it "Can create an email and transform it into Text" $ do
-            (mustachedTemplate, heading, orgfile) <- getMustachedTemplate
+        it "Can create an email and transform it into Text in an example" $ do
+            (mustachedTemplate, heading, orgfile) <- getMailInfodTemplate
             mailEither <- createEmail heading orgfile mustachedTemplate
             case mailEither of
                 Left errMess -> printErrMess (lines errMess) Error

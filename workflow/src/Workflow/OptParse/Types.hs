@@ -4,59 +4,25 @@
 
 module Workflow.OptParse.Types where
 
-import Data.Configurator.Types
-import qualified Data.Text as T
 import Data.Text (Text)
 import Import
 import Network.Mail.Mime
-
-data ShouldPrint
-    = Error
-    | Warning
-    | Not
-    deriving (Show, Eq)
-
-data Extension
-    = Plain
-    | Html
-    deriving (Show, Eq)
-
-data MailTemplate = MailTemplate
-    { headerFile :: Path Abs File
-    , bodyFile :: Path Abs File
-    , altBodyFile :: Maybe (Path Abs File)
-    } deriving (Show, Eq)
-
-data MustachedMailTemplate = MustachedMailTemplate
-    { mustachedHeaderFile :: Path Abs File
-    , body :: (Extension, Text)
-    , altBody :: Maybe Text
-    } deriving (Show, Eq)
-
-getShouldPrint :: String -> Maybe ShouldPrint
-getShouldPrint "error" = Just Error
-getShouldPrint "nothing" = Just Not
-getShouldPrint "warning" = Just Warning
-getShouldPrint _ = Nothing
-
-instance Configured ShouldPrint where
-    convert (String string) = getShouldPrint $ T.unpack string
-    convert _ = Nothing
+import Workflow.Types
 
 type Arguments = (Command, Flags)
 
 type Instructions = (Dispatch, Settings)
 
-newtype WaitingArgsCommand = WaitingArgsCommand
+newtype CommandWaitingArgs = CommandWaitingArgs
     { cmdWorkDirPath :: Maybe FilePath
     } deriving (Show, Eq)
 
-newtype NextArgsCommand = NextArgsCommand
+newtype CommandNextArgs = CommandNextArgs
     { cmdProjectsGlob :: Maybe String
     } deriving (Show, Eq)
 
-data RemArgsCommand = RemArgsCommand
-    { cmdWaitArgs :: WaitingArgsCommand
+data CommandRemArgs = CommandRemArgs
+    { cmdWaitArgs :: CommandWaitingArgs
     , cmdMaxDays :: Maybe Int
     , cmdFromAddress :: Maybe Text
     , cmdMailSenderName :: Maybe String
@@ -64,9 +30,9 @@ data RemArgsCommand = RemArgsCommand
     } deriving (Show, Eq)
 
 data Command
-    = CommandWaiting WaitingArgsCommand
-    | CommandNext NextArgsCommand
-    | CommandRem RemArgsCommand
+    = CommandWaiting CommandWaitingArgs
+    | CommandNext CommandNextArgs
+    | CommandRem CommandRemArgs
     deriving (Show, Eq)
 
 data Flags = Flags
@@ -91,34 +57,34 @@ data Settings =
 defaultShouldPrint :: ShouldPrint
 defaultShouldPrint = Warning
 
-data WaitingArgsDispatch = WaitingArgsDispatch
+data DispatchWaitingArgs = DispatchWaitingArgs
     { dspWorkDir :: Path Abs Dir
     , dspWaitingShouldPrint :: ShouldPrint
     } deriving (Show, Eq)
 
-data NextArgsDispatch = NextArgsDispatch
+data DispatchNextArgs = DispatchNextArgs
     { dspProjectDir :: Path Abs Dir
     , dspProjectFiles :: [Path Abs File]
     , dspNextShouldPrint :: ShouldPrint
     } deriving (Show, Eq)
 
-data RemArgsDispatch = RemArgsDispatch
-    { dspWaitArgs :: WaitingArgsDispatch
-    , maxDays :: Int
+data DispatchRemArgs = DispatchRemArgs
+    { dspWaitArgs :: DispatchWaitingArgs
+    , dspMaxDays :: Int
     , dspFromAddress :: Address
-    , dspTemplate :: MailTemplate
+    , dspTemplate :: TemplateFiles
     } deriving (Show, Eq)
 
 data RemSets = RemSets
-    { maxDaysSets :: Int
-    , workDirSets :: Path Abs Dir
-    , fromAddressSets :: Address
-    , shouldPrintSets :: ShouldPrint
-    , mailTemplateSets :: MailTemplate
+    { setsMaxDays :: Int
+    , setsWorkDir :: Path Abs Dir
+    , setsFromAddress :: Address
+    , setsShouldPrint :: ShouldPrint
+    , setsTemplateFiles :: TemplateFiles
     } deriving (Show, Eq)
 
 data Dispatch
-    = DispatchWaiting WaitingArgsDispatch
-    | DispatchNext NextArgsDispatch
-    | DispatchRem RemArgsDispatch
+    = DispatchWaiting DispatchWaitingArgs
+    | DispatchNext DispatchNextArgs
+    | DispatchRem DispatchRemArgs
     deriving (Show, Eq)

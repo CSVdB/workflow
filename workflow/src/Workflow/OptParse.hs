@@ -6,6 +6,7 @@
 module Workflow.OptParse
     ( module Workflow.OptParse
     , module Workflow.OptParse.Types
+    , module Workflow.Types
     ) where
 
 import Data.Configurator
@@ -18,6 +19,7 @@ import Options.Applicative
 import System.Environment
 import System.FilePath.Posix
 import Workflow.OptParse.Types
+import Workflow.Types
 
 getInstructions :: IO Instructions
 getInstructions = do
@@ -34,80 +36,81 @@ getDispatch cmd flags = do
     getDispatchFromConfig cmd flags cfg
 
 getDispatchFromConfig :: Command -> Flags -> Configuration -> IO Dispatch
-getDispatchFromConfig cmd Flags {..} Configuration {..} =
+getDispatchFromConfig cmd flags@Flags {..} config@Configuration {..} =
     let shouldPrint =
             fromMaybe
                 (fromMaybe defaultShouldPrint cfgShouldPrint)
                 flagsShouldPrint
-    in case cmd of
-           CommandWaiting args -> do
-               let workDirPath =
-                       fromMaybe defaultWorkDirPath $
-                       mplus (cmdWorkDirPath args) cfgWorkDir
-               DispatchWaiting . (`WaitingArgsDispatch` shouldPrint) <$>
-                   formatWorkDirPath workDirPath
-           CommandNext args -> do
-               (projectDir, projectFiles) <-
-                   getProjectFilesFromProjectsGlob $
-                   fromMaybe (defaultProjectsGlob defaultWorkDirPath) $
-                   mplus (cmdProjectsGlob args) cfgProjectsGlob
-               pure $
-                   DispatchNext $
-                   NextArgsDispatch projectDir projectFiles shouldPrint
-           CommandRem RemArgsCommand {..} -> do
-               let workDirPath =
-                       fromMaybe defaultWorkDirPath $
-                       mplus (cmdWorkDirPath cmdWaitArgs) cfgWorkDir
-               workDir <- formatWorkDirPath workDirPath
-               let maxDays =
-                       fromMaybe defaultMaxDays $ mplus cmdMaxDays cfgMaxDays
-               fromEmailAddress <-
-                   case cmdFromAddress of
-                       Just text -> pure text
-                       Nothing ->
-                           case cfgFromAddress of
-                               Just text -> pure text
-                               Nothing ->
-                                   die $
-                                   unlines
-                                       [ "No email address was given to send emails from."
-                                       , "Add it to the config file by using "
-                                       , "\"fromAddress = user@example.com\" and "
-                                       , "\"name = user\"."
-                                       ]
-               let fromName =
-                       T.pack <$> mplus cmdMailSenderName cfgMailSenderName
-               let templateMaybe = mplus cmdTemplateFile cfgTemplateFile
-               template <-
-                   case templateMaybe of
-                       Nothing ->
-                           die
-                               "No global template was given. Check the README to see how to set up reminders."
-                       Just list -> pure list
-               mailTemplate <-
-                   templateToMailTemplate <$> resolveStringToFiles template
-               case mailTemplate of
-                   Left errMess -> die errMess
-                   Right temp ->
-                       pure $
-                       DispatchRem $
-                       RemArgsDispatch
-                           (WaitingArgsDispatch workDir shouldPrint)
-                           maxDays
-                           (Address fromName fromEmailAddress)
-                           temp
+    in getDispatchFromConfigAndShouldPrint cmd flags config shouldPrint
 
-templateToMailTemplate :: [Path Abs File] -> Either String MailTemplate
-templateToMailTemplate files =
+getFromMaybe :: Maybe a -> String -> IO a
+getFromMaybe (Just x) _ = pure x
+getFromMaybe Nothing s = die s
+
+getFromEither :: Either String a -> IO a
+getFromEither (Left s) = die s
+getFromEither (Right x) = pure x
+
+getDispatchFromConfigAndShouldPrint :: Command
+                                    -> Flags
+                                    -> Configuration
+                                    -> ShouldPrint
+                                    -> IO Dispatch
+getDispatchFromConfigAndShouldPrint (CommandWaiting args) Flags {..} Configuration {..} shouldPrint = do
+    let workDirPath =
+            fromMaybe defaultWorkDirPath $
+            mplus (cmdWorkDirPath args) cfgWorkDir
+    DispatchWaiting . (`DispatchWaitingArgs` shouldPrint) <$>
+        formatWorkDirPath workDirPath
+getDispatchFromConfigAndShouldPrint (CommandNext args) Flags {..} Configuration {..} shouldPrint = do
+    (projectDir, projectFiles) <-
+        getProjectFilesFromProjectsGlob $
+        fromMaybe (defaultProjectsGlob defaultWorkDirPath) $
+        mplus (cmdProjectsGlob args) cfgProjectsGlob
+    pure $ DispatchNext $ DispatchNextArgs projectDir projectFiles shouldPrint
+getDispatchFromConfigAndShouldPrint (CommandRem CommandRemArgs {..}) Flags {..} Configuration {..} shouldPrint = do
+    workDir <-
+        formatWorkDirPath $
+        fromMaybe defaultWorkDirPath $
+        mplus (cmdWorkDirPath cmdWaitArgs) cfgWorkDir
+    let maxDays = fromMaybe defaultMaxDays $ mplus cmdMaxDays cfgMaxDays
+    fromEmailAddress <-
+        getFromMaybe (mplus cmdFromAddress cfgFromAddress) $
+        unlines
+            [ "No email address was given to send emails from."
+            , "Add it to the config file by using "
+            , "\"fromAddress = user@example.com\" and "
+            , "\"name = user\"."
+            ]
+    let fromName = T.pack <$> mplus cmdMailSenderName cfgMailSenderName
+    let templateMaybe = mplus cmdTemplateFile cfgTemplateFile
+    template <-
+        getFromMaybe templateMaybe $
+        unlines
+            [ "No global template was given. Put a reference to the global template in the config file as"
+            , "dftMailFile = \"~/.wf/email-template\""
+            , "where .wf/email-template.[header,txt,html] contain the global template."
+            ]
+    mailTemplate <-
+        templateToTemplateFiles <$> getExistingPathsFromTemplateFile template
+    temp <- getFromEither mailTemplate
+    pure . DispatchRem $
+        DispatchRemArgs
+            (DispatchWaitingArgs workDir shouldPrint)
+            maxDays
+            (Address fromName fromEmailAddress)
+            temp
+
+templateToTemplateFiles :: [Path Abs File] -> Either String TemplateFiles
+templateToTemplateFiles files =
     let headerFileEither =
             case getFileWithExtension ".header" files of
                 Nothing ->
                     Left "The global template has no or multiple header files."
                 Just file -> Right file
-        plainFileMaybe = getFileWithExtension ".txt" files
-        htmlFileMaybe = getFileWithExtension ".html" files
         filesWithExtension =
-            case (plainFileMaybe, htmlFileMaybe) of
+            case ( getFileWithExtension ".txt" files
+                 , getFileWithExtension ".html" files) of
                 (Nothing, Nothing) ->
                     Left
                         "The global template contains either no or multiple html and plain files."
@@ -118,13 +121,13 @@ templateToMailTemplate files =
     in case (,) <$> headerFileEither <*> filesWithExtension of
            Left errMess -> Left errMess
            Right (headerFile, (file1, file2)) ->
-               Right $ MailTemplate headerFile file1 file2
+               Right $ TemplateFiles headerFile file1 file2
 
 getFileWithExtension :: Text -> [Path Abs File] -> Maybe (Path Abs File)
 getFileWithExtension ext = find ((==) ext . T.pack . fileExtension)
 
-resolveStringToFiles :: FilePath -> IO [Path Abs File]
-resolveStringToFiles path = do
+getExistingPathsFromTemplateFile :: FilePath -> IO [Path Abs File]
+getExistingPathsFromTemplateFile path = do
     templatesDir <- getTemplatesDir
     files <-
         mapM (resolveFile templatesDir) $
@@ -256,7 +259,7 @@ parseCommandWaiting :: ParserInfo Command
 parseCommandWaiting = info parser modifier
   where
     modifier = fullDesc <> progDesc "Print a list of the \"waiting\" tasks"
-    parser = CommandWaiting . WaitingArgsCommand <$> workflowDirParser
+    parser = CommandWaiting . CommandWaitingArgs <$> workflowDirParser
 
 parseCommandNext :: ParserInfo Command
 parseCommandNext = info parser modifier
@@ -265,7 +268,7 @@ parseCommandNext = info parser modifier
         fullDesc <>
         progDesc
             "Print the next actions and warn when a file does not have one."
-    parser = CommandNext . NextArgsCommand <$> projectsGlobParser
+    parser = CommandNext . CommandNextArgs <$> projectsGlobParser
 
 parseCommandRem :: ParserInfo Command
 parseCommandRem = info parser modifier
@@ -273,7 +276,7 @@ parseCommandRem = info parser modifier
     modifier = fullDesc <> progDesc "Print a list of the \"waiting\" tasks"
     parser =
         CommandRem <$>
-        (RemArgsCommand <$> (WaitingArgsCommand <$> workflowDirParser) <*>
+        (CommandRemArgs <$> (CommandWaitingArgs <$> workflowDirParser) <*>
          maxDaysParser <*>
          fromAddressParser <*>
          mailSenderNameParser <*>
@@ -317,7 +320,7 @@ configFileParser =
 shouldPrintParser :: Parser (Maybe ShouldPrint)
 shouldPrintParser =
     option
-        (Just <$> maybeReader getShouldPrint)
+        (Just <$> maybeReader parseShouldPrint)
         (mconcat
              [ long "should-print"
              , help
